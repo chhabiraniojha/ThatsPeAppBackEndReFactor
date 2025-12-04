@@ -1,0 +1,92 @@
+const axios = require('axios')
+exports.a1RechargeCallback = async (req, res) => {
+
+    const { txid, status, opid } = req.query
+    try {
+        if (status == "Failure") {
+            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
+                rechargeTransactionId: txid,
+                apiResponse: "FAILURE"
+            })
+            let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
+                allTransactionId:txid
+            })
+            console.log(refdundData)
+            return  
+        
+        }
+        else if (status == "Success") {
+            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
+                rechargeTransactionId: txid,
+                apiResponse: "SUCCESS"
+            })
+            return  
+        }
+
+    } catch (error) {
+        
+        return  
+    }
+}
+exports.roboticsExchangeCallback = async (req, res) => {
+
+    const { txnid, status, operatorid } = req.query
+    try {
+        if (status == 3) {
+            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
+                rechargeTransactionId: txnid,
+                apiResponse: "FAILURE"
+            })
+            let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
+                allTransactionId:txnid
+            })
+            console.log(refdundData)
+            return  res.status(200).json({ message: "Transaction updated", })
+
+        
+        }
+        else if (status == 1) {
+            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
+                rechargeTransactionId: txnid,
+                apiResponse: "SUCCESS"
+            })
+            return  res.status(200).json({ message: "Transaction updated", })
+
+        }
+
+    } catch (error) {
+        
+        return  
+    }
+}
+exports.rechargeExchangeCallback = async (req, res) => {
+
+    const { yourtransid, status, opid	 } = req.query
+    try {
+        if (status == "FAIL") {
+            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
+                rechargeTransactionId: yourtransid,
+                apiResponse: "FAILURE"
+            })
+            let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
+                allTransactionId:yourtransid
+            })
+            console.log(refdundData)
+            return  res.status(200).json({ message: "Transaction updated", })
+
+        
+        }
+        else if (status == "SUCCESS") {
+            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
+                rechargeTransactionId: yourtransid,
+                apiResponse: "SUCCESS"
+            })
+            return  res.status(200).json({ message: "Transaction updated", })
+
+        }
+
+    } catch (error) {
+        
+        return  
+    }
+}
