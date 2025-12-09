@@ -128,18 +128,19 @@ exports.verifyOtp = async (req, res) => {
       },
       order: [['expirationTime', 'DESC']]
     });
-    console.log(userRecords);
+    // console.log(userRecords);
 
     if (userRecords.length <= 0) {
       return res.status(200).json({ success: false, message: 'otp mismatch or expired', statuscode: 0 });
     } else {
       if (userRecords && otp == userRecords[0].otp) {
         const userData = await userModel.findOne({ where: { mobileNo } });
+        // console.log('userDataxxxxxxxxxxxxxxxxxxxxxxxxxxxx', userData.dataValues);
 
         if (userData) {
           let userDetails = userData?.dataValues;
-          delete userDetails?.dataValues.password;
-          console.log('userData---', userData?.dataValues);
+          // delete userDetails?.dataValues.password;
+          // console.log('userData---', userData?.dataValues);
           return res.status(200).json({
             success: true,
             message: 'otp successfully verified ',
