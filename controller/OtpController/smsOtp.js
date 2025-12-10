@@ -86,10 +86,10 @@ exports.smsSendOtp = async (req, res) => {
     // Save OTP record in otpModel
     if(mobileNo=="9938300585"){
       const defaultOtp="000000"
-      const insertRecord = await MobileOtpModel.create({ mobileNo, otp:defaultOtp, expirationTime });
+      const insertRecord1 = await MobileOtpModel.create({ mobileNo, otp:defaultOtp, expirationTime });
       return res.status(200).json({ success: true, message: 'OTP sent successfully', statuscode: 1});
     }
-    
+    const insertRecord = await MobileOtpModel.create({ mobileNo, otp:defaultOtp, expirationTime });
     // Send OTP via sms
     const response = await sendSms(mobileNo, otp);
     console.log('response of sms send ', response);
@@ -127,7 +127,7 @@ exports.verifyOtp = async (req, res) => {
       },
       order: [['expirationTime', 'DESC']]
     });
-    // console.log(userRecords);
+    console.log(userRecords);
 
     if (userRecords.length <= 0) {
       return res.status(200).json({ success: false, message: 'otp mismatch or expired', statuscode: 0 });
