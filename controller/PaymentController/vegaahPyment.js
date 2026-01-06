@@ -31,6 +31,7 @@ exports.generateSignature = async (req, res) => {
 exports.vegaahCallback = async (req, res) => {
   try {
     // 1️⃣ Read callback payload
+     return res.status(200).send(' Testing  or adding webhooks  ');
   
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('Vegaah Callback Received:', data);
