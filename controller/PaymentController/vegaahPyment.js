@@ -6,7 +6,8 @@ exports.generateSignature = async (req, res) => {
     const secretKey = process.env.VEGAH_SECRET_KEY;
     // const payloadString = JSON.stringify(payload);
 
-    const dataToHash =payload.trackId +'|' + payload.terminalId +'|' + payload.password +'|' + secretKey + '|' + payload.amount + '|' + payload.currency;
+    const dataToHash =
+      payload.trackId + '|' + payload.terminalId + '|' + payload.password + '|' + secretKey + '|' + payload.amount + '|' + payload.currency;
 
     console.log('STRING TO HASH:--->', dataToHash);
     if (!payload) {
@@ -27,49 +28,36 @@ exports.generateSignature = async (req, res) => {
   }
 };
 
- 
-
 exports.vegaahCallback = async (req, res) => {
   try {
     // 1️⃣ Read callback payload
-    const {
-      paymentId,
-      responseCode,
-      amount,
-      signature
-    } = req.body;
-
-    console.log("Vegaah Callback Received:", req.body);
+  
+    const data = req.method === 'POST' ? req.body : req.query;
+    console.log('Vegaah Callback Received:', data);
+    const { paymentId, responseCode, amount, signature } = data || {};
 
     // 2️⃣ Validate required fields
     if (!paymentId || !responseCode || !amount || !signature) {
-      return res.status(400).send("INVALID CALLBACK DATA");
+      return res.status(400).send('INVALID CALLBACK DATA');
     }
 
     // 3️⃣ Generate expected signature
     const merchantKey = process.env.VEGAH_SECRET_KEY.trim();
 
-    const stringToHash =
-      paymentId + "|" +
-      merchantKey + "|" +
-      responseCode + "|" +
-      amount;
+    const stringToHash = paymentId + '|' + merchantKey + '|' + responseCode + '|' + amount;
 
-    const expectedSignature = crypto
-      .createHash("sha256")
-      .update(stringToHash)
-      .digest("hex");
+    const expectedSignature = crypto.createHash('sha256').update(stringToHash).digest('hex');
 
     // 4️⃣ Verify signature
     if (expectedSignature !== signature) {
-      console.error("Invalid Vegaah callback signature");
-      return res.status(400).send("INVALID SIGNATURE");
+      console.error('Invalid Vegaah callback signature');
+      return res.status(400).send('INVALID SIGNATURE');
     }
 
     // 5️⃣ Process payment result
-    if (responseCode === "001") {
+    if (responseCode === '001') {
       // ✅ PAYMENT SUCCESS
-      console.log("Payment SUCCESS:", paymentId);
+      console.log('Payment SUCCESS:', paymentId);
 
       // TODO:
       // 1. Check if transaction already processed
@@ -77,18 +65,16 @@ exports.vegaahCallback = async (req, res) => {
       // 3. Perform recharge / business logic
     } else {
       // ❌ PAYMENT FAILED
-      console.log("Payment FAILED:", paymentId);
+      console.log('Payment FAILED:', paymentId);
 
       // TODO:
       // 1. Mark transaction FAILED in DB
     }
 
     // 6️⃣ Respond OK (VERY IMPORTANT)
-    return res.status(200).send("OK");
-
+    return res.status(200).send('OK');
   } catch (error) {
-    console.error("Callback Error:", error);
-    return res.status(500).send("SERVER ERROR");
+    console.error('Callback Error:', error);
+    return res.status(500).send('SERVER ERROR');
   }
 };
-
