@@ -36,7 +36,7 @@ exports.vegaahCallback = async (req, res) => {
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('Vegaah Callback Received:', data);
     const { paymentId, responseCode, amount, signature } = data || {};
-
+  return res.status(200).send('recharge succes  calback check :)');
     // 2️⃣ Validate required fields
     if (!paymentId || !responseCode || !amount || !signature) {
       return res.status(400).send('INVALID CALLBACK DATA');
