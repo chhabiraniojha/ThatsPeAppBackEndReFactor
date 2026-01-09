@@ -33,58 +33,6 @@ exports.generateSignature = async (req, res) => {
     return res.status(500).json({ error, message: 'Internal Server Error' });
   }
 };
-
-exports.vegaahCallback = async (req, res) => {
-  try {
-    // 1️⃣ Read callback payload
-
-    const data = req.method === 'POST' ? req.body : req.query;
-    console.log('Vegaah Callback Received:', data);
-    const { paymentId, responseCode, amount, signature } = data || {};
-    return res.status(200).send('recharge succes  calback check :)');
-    // 2️⃣ Validate required fields
-    if (!paymentId || !responseCode || !amount || !signature) {
-      return res.status(400).send('INVALID CALLBACK DATA');
-    }
-
-    // 3️⃣ Generate expected signature
-    const merchantKey = process.env.VEGAH_SECRET_KEY.trim();
-
-    const stringToHash = paymentId + '|' + merchantKey + '|' + responseCode + '|' + amount;
-
-    const expectedSignature = crypto.createHash('sha256').update(stringToHash).digest('hex');
-
-    // 4️⃣ Verify signature
-    if (expectedSignature !== signature) {
-      console.error('Invalid Vegaah callback signature');
-      return res.status(400).send('INVALID SIGNATURE');
-    }
-
-    // 5️⃣ Process payment result
-    if (responseCode === '001') {
-      // ✅ PAYMENT SUCCESS
-      console.log('Payment SUCCESS:', paymentId);
-
-      // TODO:
-      // 1. Check if transaction already processed
-      // 2. Mark transaction SUCCESS in DB
-      // 3. Perform recharge / business logic
-    } else {
-      // ❌ PAYMENT FAILED
-      console.log('Payment FAILED:', paymentId);
-
-      // TODO:
-      // 1. Mark transaction FAILED in DB
-    }
-
-    // 6️⃣ Respond OK (VERY IMPORTANT)
-    return res.status(200).send('OK');
-  } catch (error) {
-    console.error('Callback Error:', error);
-    return res.status(500).send('SERVER ERROR');
-  }
-};
-
 exports.payRequest = async (req, res) => {
   const {
     ezytm_circle_code,
@@ -136,6 +84,7 @@ exports.payRequest = async (req, res) => {
       const discountAmount = operatorData.discount;
       const discountType = operatorData.discount_type;
       // const deductAmount=(amount*discountAmount)/100
+      
       if (discountType == 'percentage') {
         finalAmount = amount - (amount * discountAmount) / 100;
       } else {
@@ -150,6 +99,7 @@ exports.payRequest = async (req, res) => {
           message: 'Discounted  amount is not perfect '
         });
       }
+     
       //math.cell use for all api to round the amont
 
       // callbackData = {
@@ -195,8 +145,15 @@ exports.payRequest = async (req, res) => {
     });
 
     console.log('ORDER DATA CREATED:', orderData);
-    let trackid = Math.floor(Math.random() * 1000000 + 1);
-    const payload = { trackId: trackid, terminalId: 'TER7030747', password: 'TER26010626145585634059', amount: '01.00', currency: 'INR' };
+
+    // let trackid = Math.floor(Math.random() * 1000000 + 1);
+    const payload = {
+      trackId: orderId,
+      terminalId: process.env.VEGAH_TERMINAL_ID,
+      password: process.env.VEGAH_PASSWORD,
+      amount: '01.00',
+      currency: 'INR'
+    };
     const secretKey = process.env.VEGAH_SECRET_KEY;
     // const payloadString = JSON.stringify(payload);
 
@@ -217,10 +174,10 @@ exports.payRequest = async (req, res) => {
     const signature = crypto.createHash('sha256').update(dataToHash).digest('hex');
     payRequestRequiredData = {
       order: {
-        orderId: trackid
+        orderId: orderId
       },
-      terminalId: 'TER7030747',
-      password: 'TER26010626145585634059',
+      terminalId: process.env.VEGAH_TERMINAL_ID,
+      password: process.env.VEGAH_PASSWORD,
       signature: signature,
       amount: '01.00',
       currency: 'INR',
@@ -230,33 +187,83 @@ exports.payRequest = async (req, res) => {
         billingAddressCountry: 'IN'
       }
     };
-    //api call to vegaah pay request 
+    //api call to vegaah pay request
     const payRequestResponse = await axios.post(
       'https://checkout.vegaah.com/vegaahpayments/v2/payments/pay-request',
       payRequestRequiredData
     );
     console.log('PAY REQUEST RESPONSE:--->', payRequestResponse.data);
-// initiate payment table entry   
-   const paymentId = await UIDGenerator(); 
-const paymentData = await Payment.create({
+    // initiate payment table entry
+    const paymentId = await UIDGenerator();
+    const paymentData = await Payment.create({
       id: paymentId,
       orderId: orderId,
       gateway: 'VEGAH',
-      paymentMode: 'UPI', 
+      paymentMode: 'UPI',
       gatewayTransactionId: payRequestResponse?.data?.transactionId,
       amount: finalAmount,
       status: 'INITIATED',
       responseCode: payRequestResponse?.data?.responseCode,
       rawCallback: payRequestResponse.data
-       
     });
     console.log('PAYMENT DATA CREATED:', paymentData);
 
-
     let linkurl = payRequestResponse?.data?.paymentLink?.linkUrl + payRequestResponse?.data?.transactionId;
-    return res.status(200).json({ linkurl, orderData ,paymentData});
+    return res.status(200).json({ linkurl });
   } catch (error) {}
 };
+
+exports.vegaahCallback = async (req, res) => {
+  try {
+    // 1️⃣ Read callback payload
+
+    const data = req.method === 'POST' ? req.body : req.query;
+    console.log('Vegaah Callback Received:', data?.amount);
+    const { paymentId, responseCode, amount, signature } = data || {};
+    return res.status(200).send('recharge succes  calback check :)');
+    // 2️⃣ Validate required fields
+    if (!paymentId || !responseCode || !amount || !signature) {
+      return res.status(400).send('INVALID CALLBACK DATA');
+    }
+
+    // 3️⃣ Generate expected signature
+    const merchantKey = process.env.VEGAH_SECRET_KEY.trim();
+
+    const stringToHash = paymentId + '|' + merchantKey + '|' + responseCode + '|' + amount;
+
+    const expectedSignature = crypto.createHash('sha256').update(stringToHash).digest('hex');
+
+    // 4️⃣ Verify signature
+    if (expectedSignature !== signature) {
+      console.error('Invalid Vegaah callback signature');
+      return res.status(400).send('INVALID SIGNATURE');
+    }
+
+    // 5️⃣ Process payment result
+    if (responseCode === '001') {
+      // ✅ PAYMENT SUCCESS
+      console.log('Payment SUCCESS:', paymentId);
+
+      // TODO:
+      // 1. Check if transaction already processed
+      // 2. Mark transaction SUCCESS in DB
+      // 3. Perform recharge / business logic
+    } else {
+      // ❌ PAYMENT FAILED
+      console.log('Payment FAILED:', paymentId);
+
+      // TODO:
+      // 1. Mark transaction FAILED in DB
+    }
+
+    // 6️⃣ Respond OK (VERY IMPORTANT)
+    return res.status(200).send('OK');
+  } catch (error) {
+    console.error('Callback Error:', error);
+    return res.status(500).send('SERVER ERROR');
+  }
+};
+
 exports.paymentStausCheck = async (req, res) => {
   try {
     return res.status(200).json({ message: 'Payment Status Check Endpoint', success: true });
