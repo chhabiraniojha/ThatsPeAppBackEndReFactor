@@ -1,5 +1,10 @@
 const { default: axios } = require('axios');
 const crypto = require('crypto');
+const Order = require('../../models/OrderModel/order');
+const Payment = require('../../models/PaymentModel/payment');
+const requestIp = require('request-ip');
+const UIDGenerator = require('../../util/uidGenerator');
+const operatorModel = require('../../models/OperatorDataModel/operatorData');
 
 exports.generateSignature = async (req, res) => {
   try {
@@ -36,7 +41,7 @@ exports.vegaahCallback = async (req, res) => {
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('Vegaah Callback Received:', data);
     const { paymentId, responseCode, amount, signature } = data || {};
-  return res.status(200).send('recharge succes  calback check :)');
+    return res.status(200).send('recharge succes  calback check :)');
     // 2️⃣ Validate required fields
     if (!paymentId || !responseCode || !amount || !signature) {
       return res.status(400).send('INVALID CALLBACK DATA');
@@ -79,8 +84,117 @@ exports.vegaahCallback = async (req, res) => {
     return res.status(500).send('SERVER ERROR');
   }
 };
+
 exports.payRequest = async (req, res) => {
+  const {
+    ezytm_circle_code,
+    ezytm_operator_code,
+    customer_number,
+    amount,
+    subCategoryId,
+    transactionType,
+    status,
+    rechargeType,
+    discountedAmount,
+    purpose
+  } = req.body;
   try {
+    const clientIp = requestIp.getClientIp(req);
+    const user = req.user;
+    const userId = user.id;
+    const paymentTransactionId = await UIDGenerator();
+    const paymentInitiateLogId = await UIDGenerator();
+    const { transactionFor } = req.body;
+    let finalAmount;
+    if (!((purpose && purpose == 'recharge') || purpose == 'addfund')) {
+      return res.status(200).json({
+        success: false,
+        statusCode: 0,
+        message: 'Missing Purpose '
+      });
+    }
+    if (purpose == 'recharge' && !(amount && customer_number && subCategoryId && userId && status)) {
+      return res.status(200).json({
+        success: false,
+        statusCode: 0,
+        message: 'Missing Recharge Details '
+      });
+    }
+    if (purpose == 'addfund' && !(amount && paymentTransactionId && userId)) {
+      return res.status(200).json({
+        success: false,
+        statusCode: 0,
+        message: 'Missing Walet Recharge Details '
+      });
+    }
+    // Prepare the data for required in order table create --
+    if (purpose == 'recharge') {
+      const operatorData = await operatorModel.findOne({
+        where: { ezytm_operator_code: ezytm_operator_code }
+      });
+
+      const discountAmount = operatorData.discount;
+      const discountType = operatorData.discount_type;
+      // const deductAmount=(amount*discountAmount)/100
+      if (discountType == 'percentage') {
+        finalAmount = amount - (amount * discountAmount) / 100;
+      } else {
+        finalAmount = amount - discountAmount;
+      }
+      finalAmount = Math.ceil(finalAmount * 10) / 10;
+      console.log('FINAL AMOUNT AFTER DISCOUNT:--->', finalAmount);
+      if (discountedAmount != finalAmount) {
+        return res.status(200).json({
+          success: false,
+          statusCode: 0,
+          message: 'Discounted  amount is not perfect '
+        });
+      }
+      //math.cell use for all api to round the amont
+
+      // callbackData = {
+      //   ezytm_circle_code,
+      //   ezytm_operator_code,
+      //   customer_number,
+      //   amount,
+      //   subCategoryId,
+      //   transactionType,
+      //   status,
+      //   rechargeType,
+      //   discountedAmount,
+      //   finalAmount,
+      //   purpose,
+      //   userId
+      // };
+    }
+
+    //creae order table entry for recharge purpose
+    const orderId = await UIDGenerator();
+    console.log(
+      'GENERATED ORDER ID:',
+      orderId,
+      userId,
+      subCategoryId,
+      customer_number,
+      amount,
+      rechargeType,
+      ezytm_operator_code,
+      ezytm_circle_code
+    );
+
+    const orderData = await Order.create({
+      id: orderId,
+      userId: userId,
+      serviceType: subCategoryId,
+      serviceRef: customer_number,
+      operatorType: rechargeType,
+      operator: ezytm_operator_code,
+      circle: ezytm_circle_code,
+      amount: 50,
+      status: 'CREATED'
+    });
+
+    console.log('ORDER DATA CREATED:', orderData);
     let trackid = Math.floor(Math.random() * 1000000 + 1);
     const payload = { trackId: trackid, terminalId: 'TER7030747', password: 'TER26010626145585634059', amount: '01.00', currency: 'INR' };
     const secretKey = process.env.VEGAH_SECRET_KEY;
@@ -116,13 +230,31 @@ exports.payRequest = async (req, res) => {
         billingAddressCountry: 'IN'
       }
     };
+    //api call to vegaah pay request 
     const payRequestResponse = await axios.post(
       'https://checkout.vegaah.com/vegaahpayments/v2/payments/pay-request',
       payRequestRequiredData
     );
     console.log('PAY REQUEST RESPONSE:--->', payRequestResponse.data);
+// initiate payment table entry   
+   const paymentId = await UIDGenerator(); 
+const paymentData = await Payment.create({
+      id: paymentId,
+      orderId: orderId,
+      gateway: 'VEGAH',
+      paymentMode: 'UPI', 
+      gatewayTransactionId: payRequestResponse?.data?.transactionId,
+      amount: finalAmount,
+      status: 'INITIATED',
+      responseCode: payRequestResponse?.data?.responseCode,
+      rawCallback: payRequestResponse.data
+       
+    });
+    console.log('PAYMENT DATA CREATED:', paymentData);
+
+
     let linkurl = payRequestResponse?.data?.paymentLink?.linkUrl + payRequestResponse?.data?.transactionId;
-    return res.status(200).json({linkurl});
+    return res.status(200).json({ linkurl, orderData ,paymentData});
   } catch (error) {}
 };
 exports.paymentStausCheck = async (req, res) => {
@@ -131,4 +263,4 @@ exports.paymentStausCheck = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error, message: 'Internal Server Error' });
   }
-}
+};
