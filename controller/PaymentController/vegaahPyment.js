@@ -5,6 +5,7 @@ const Payment = require('../../models/PaymentModel/payment');
 const requestIp = require('request-ip');
 const UIDGenerator = require('../../util/uidGenerator');
 const operatorModel = require('../../models/OperatorDataModel/operatorData');
+const { or } = require('sequelize');
 
 exports.generateSignature = async (req, res) => {
   try {
@@ -84,7 +85,7 @@ exports.payRequest = async (req, res) => {
       const discountAmount = operatorData.discount;
       const discountType = operatorData.discount_type;
       // const deductAmount=(amount*discountAmount)/100
-      
+
       if (discountType == 'percentage') {
         finalAmount = amount - (amount * discountAmount) / 100;
       } else {
@@ -99,7 +100,7 @@ exports.payRequest = async (req, res) => {
           message: 'Discounted  amount is not perfect '
         });
       }
-     
+
       //math.cell use for all api to round the amont
 
       // callbackData = {
@@ -218,46 +219,141 @@ exports.vegaahCallback = async (req, res) => {
     // 1️⃣ Read callback payload
 
     const data = req.method === 'POST' ? req.body : req.query;
-    console.log('Vegaah Callback Received:', data?.amount);
-    const { paymentId, responseCode, amount, signature } = data || {};
-    return res.status(200).send('recharge succes  calback check :)');
+    console.log('Vegaah Callback Received:', data);
+    const { resul, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
+    // return res.status(200).send('recharge succes  calback check :)',data);
     // 2️⃣ Validate required fields
-    if (!paymentId || !responseCode || !amount || !signature) {
-      return res.status(400).send('INVALID CALLBACK DATA');
-    }
+    // if (!paymentId || !responseCode || !amount || !signature) {
+    //   return res.status(400).send('INVALID CALLBACK DATA');
+    // }
 
-    // 3️⃣ Generate expected signature
-    const merchantKey = process.env.VEGAH_SECRET_KEY.trim();
+    // // 3️⃣ Generate expected signature
+    // const merchantKey = process.env.VEGAH_SECRET_KEY.trim();
 
-    const stringToHash = paymentId + '|' + merchantKey + '|' + responseCode + '|' + amount;
+    // const stringToHash = paymentId + '|' + merchantKey + '|' + responseCode + '|' + amount;
 
-    const expectedSignature = crypto.createHash('sha256').update(stringToHash).digest('hex');
+    // const expectedSignature = crypto.createHash('sha256').update(stringToHash).digest('hex');
 
-    // 4️⃣ Verify signature
-    if (expectedSignature !== signature) {
-      console.error('Invalid Vegaah callback signature');
-      return res.status(400).send('INVALID SIGNATURE');
-    }
+    // // 4️⃣ Verify signature
+    // if (expectedSignature !== signature) {
+    //   console.error('Invalid Vegaah callback signature');
+    //   return res.status(400).send('INVALID SIGNATURE');
+    // }
 
     // 5️⃣ Process payment result
-    if (responseCode === '001') {
-      // ✅ PAYMENT SUCCESS
-      console.log('Payment SUCCESS:', paymentId);
+    // find the payment using transactionId
+    const paymentRecord = await Payment.findOne({
+      where: { gatewayTransactionId: transactionId }
+    });
+    console.log('PAYMENT RECORD FOUND:', paymentRecord);
+    if (!paymentRecord) {
+      console.error('Payment record not found for transactionId:', transactionId);
+      return res.status(200).send('PAYMENT RECORD NOT FOUND');
+    }
+    const paymentId = paymentRecord.id;
+    const paymentStatus = paymentRecord.status;
+    const paymentOrderId = paymentRecord.orderId;
+    const paymentAmount = paymentRecord.amount;
+    const responseCodeRecord = paymentRecord.responseCode;
 
+    //check the paymet record status is already success or not to handle multiple callback
+
+    if ((paymentStatus === 'SUCCESS' || paymentStatus === 'FAILED') && responseCodeRecord === '000') {
+      console.log('Payment already processed:', paymentId);
+      return res.status(200).json({ message: 'PAYMENT ALREADY PROCESSED' });
+    }
+
+    //check both order id  is same
+    if (paymentOrderId !== orderId) {
+      console.error('Order ID mismatch for paymentId:', paymentId);
+      return res.status(200).json('ORDER ID MISMATCH');
+    }
+
+    //find the order using orderId
+    const orderRecord = await Order.findOne({
+      where: { id: orderId }
+    });
+    const orderStatus = orderRecord?.status;
+    const orderAmount = orderRecord?.amount;
+    const orderUserId = orderRecord?.userId;
+    const orderServiceRef = orderRecord?.serviceRef;
+    const orderOperator = orderRecord?.operator;
+    const orderCircle = orderRecord?.circle;
+    const orderServiceType = orderRecord?.serviceType;
+    const orderOperatorType = orderRecord?.operatorType;
+
+    // if ((paymentStatus === 'SUCCESS'||paymentStatus === 'FAILED') && responseCodeRecord === '000'&& orderStatus==='CREATED') {}
+
+    console.log('ORDER RECORD FOUND:', orderRecord);
+    if (!orderRecord) {
+      console.error('Order record not found for orderId:', orderId);
+      return res.status(200).json('ORDER RECORD NOT FOUND');
+    }
+    //now  check the  anout and response code  and  other details like event resul and  payment table status  then update the payment table
+    if ( // paymentAmount == amount &&
+      responseCode === '000' &&
+      event === 'Transaction.Success' &&
+      resul === 'SUCCESS' &&
+      orderStatus === 'CREATED'
+    ) {
+      //update payment table status to success
+      await paymentRecord.update(
+        {
+          status: 'SUCCESS',
+          rrn: rrn,
+          rawCallback: data,
+          responseCode: responseCode
+        },
+        { where: { gatewayTransactionId: transactionId } }
+      );
+
+      await paymentRecord.save();
+
+      await orderRecord.update(
+        {
+          status: 'PENDING'
+        },
+        { where: { id: orderId } }
+      );
+
+      await orderRecord.save();
+    }
+
+    // now  we move recharge  if payment success and then update the order table status
+
+    if (
+      (responseCode === '000' && event === 'Transaction.Success' && resul === 'SUCCESS' && paymentRecord.status === 'SUCCESS' &&
+      orderRecord.status === 'PENDING')
+    ) {
+      // recharge logic here
+      //update order table status to success after recharge
+      //generate  random number from 1 to 3 to simulate recharge success or failure
+      const rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+
+
+      await orderRecord.update(
+        {
+          status: rechargeResult === 1 ? 'SUCCESS' : rechargeResult === 2 ? 'FAILED' : 'PENDING'
+        },
+        { where: { id: orderId } }
+      );
+
+      await orderRecord.save();
+
+      return res.status(200).json({ message: 'recharge succes  :)', status: 'false' });
       // TODO:
       // 1. Check if transaction already processed
       // 2. Mark transaction SUCCESS in DB
       // 3. Perform recharge / business logic
     } else {
       // ❌ PAYMENT FAILED
-      console.log('Payment FAILED:', paymentId);
-
       // TODO:
       // 1. Mark transaction FAILED in DB
+      return res.status(200).json({ message: 'Payment Failed', status: 'success' });
     }
 
     // 6️⃣ Respond OK (VERY IMPORTANT)
-    return res.status(200).send('OK');
+    // return res.status(200).send('OK');
   } catch (error) {
     console.error('Callback Error:', error);
     return res.status(500).send('SERVER ERROR');
@@ -265,8 +361,48 @@ exports.vegaahCallback = async (req, res) => {
 };
 
 exports.paymentStausCheck = async (req, res) => {
+  const { paymentId } = req.params;
   try {
-    return res.status(200).json({ message: 'Payment Status Check Endpoint', success: true });
+    const user = req.user;
+    const userId = user.id;
+    const paymentRecord = await Payment.findOne({
+      where: { gatewayTransactionId: paymentId }
+    });
+    if (!paymentRecord) {
+      return res.status(404).json({ message: 'Payment not found', success: false });
+    }
+    if (paymentRecord.status === 'SUCCESS') {
+      return res.status(200).json({ message: "Payment Successful", success: true, statuscode: 1  });
+    }
+  } catch (error) {
+    return res.status(500).json({ error, message: 'Internal Server Error' });
+  }
+};
+exports.orderStatusCheck = async (req, res) => {
+  const { paymentId } = req.params;
+  try {
+     const user = req.user;
+    const userId = user.id;
+    const paymentRecord = await Payment.findOne({
+      where: { gatewayTransactionId: paymentId }
+    });
+    if (!paymentRecord) {
+      return res.status(404).json({ message: 'Payment not found', success: false });
+    }
+    if (paymentRecord.status === 'SUCCESS') {
+      const orderRecord = await Order.findOne({
+        where: { id: paymentRecord.orderId }
+      });
+      if (orderRecord.status === 'SUCCESS') {
+        return res.status(200).json({ message: "Order Successful", success: true, statuscode: 1  });
+      }
+      if(orderRecord.status==='PENDING'){
+        return res.status(200).json({ message: "Order Pending", success: false, statuscode: 0  });
+      }
+      if(orderRecord.status==='FAILED'){
+        return res.status(200).json({ message: "Order Failed", success: false, statuscode: 2 });
+      }
+    }
   } catch (error) {
     return res.status(500).json({ error, message: 'Internal Server Error' });
   }
