@@ -210,7 +210,7 @@ exports.payRequest = async (req, res) => {
     console.log('PAYMENT DATA CREATED:', paymentData);
 
     let linkurl = payRequestResponse?.data?.paymentLink?.linkUrl + payRequestResponse?.data?.transactionId;
-    return res.status(200).json({ linkurl,paymentId: payRequestResponse?.data?.transactionId  });
+    return res.status(200).json({ linkurl, paymentId: payRequestResponse?.data?.transactionId });
   } catch (error) {}
 };
 
@@ -290,7 +290,8 @@ exports.vegaahCallback = async (req, res) => {
       return res.status(200).json('ORDER RECORD NOT FOUND');
     }
     //now  check the  anout and response code  and  other details like event resul and  payment table status  then update the payment table
-    if ( // paymentAmount == amount &&
+    if (
+      // paymentAmount == amount &&
       responseCode === '000' &&
       event === 'Transaction.Success' &&
       resul === 'SUCCESS' &&
@@ -322,14 +323,16 @@ exports.vegaahCallback = async (req, res) => {
     // now  we move recharge  if payment success and then update the order table status
 
     if (
-      (responseCode === '000' && event === 'Transaction.Success' && resul === 'SUCCESS' && paymentRecord.status === 'SUCCESS' &&
-      orderRecord.status === 'PENDING')
+      responseCode === '000' &&
+      event === 'Transaction.Success' &&
+      resul === 'SUCCESS' &&
+      paymentRecord.status === 'SUCCESS' &&
+      orderRecord.status === 'PENDING'
     ) {
       // recharge logic here
       //update order table status to success after recharge
       //generate  random number from 1 to 3 to simulate recharge success or failure
       const rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
-
 
       await orderRecord.update(
         {
@@ -360,47 +363,78 @@ exports.vegaahCallback = async (req, res) => {
   }
 };
 
-exports.paymentStausCheck = async (req, res) => {
+exports.paymentStatusCheck = async (req, res) => {
+  const { paymentId } = req.body;
+
+  try {
+    const userId = req.user.id;
+
+    const paymentRecord = await Payment.findOne({
+      where: {
+        gatewayTransactionId: paymentId
+        // userId // 🔐 IMPORTANT: prevents others from checking
+      }
+    });
+
+    if (!paymentRecord) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    // ✅ SUCCESS
+    if (paymentRecord.status === 'SUCCESS') {
+      return res.status(200).json({
+        message: 'Payment Successful',
+        success: true,
+        statuscode: 0
+      });
+    }
+
+    // ❌ FAILED
+    if (paymentRecord.status === 'FAILED') {
+      return res.status(200).json({
+        message: 'Payment failed',
+        success: false,
+        statuscode: 0
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal Server Error'
+    });
+  }
+};
+
+exports.orderStatusCheck = async (req, res) => {
   const { paymentId } = req.body;
   try {
     const user = req.user;
     const userId = user.id;
     const paymentRecord = await Payment.findOne({
-      where: { gatewayTransactionId: paymentId }
-    });
-    if (!paymentRecord) {
-      return res.status(404).json({ message: 'Payment not found', success: false });
-    }
-    if (paymentRecord.status === 'SUCCESS') {
-      return res.status(200).json({ message: "Payment Successful", success: true, statuscode: 1  });
-    }
-  } catch (error) {
-    return res.status(500).json({ error, message: 'Internal Server Error' });
-  }
-};
-exports.orderStatusCheck = async (req, res) => {
-  const { paymentId } = req.body;
-  try {
-     const user = req.user;
-    const userId = user.id;
-    const paymentRecord = await Payment.findOne({
-      where: { gatewayTransactionId: paymentId }
+      where: {
+        gatewayTransactionId: paymentId
+        // userId // 🔐 IMPORTANT: prevents others from checking
+      }
     });
     if (!paymentRecord) {
       return res.status(404).json({ message: 'Payment not found', success: false });
     }
     if (paymentRecord.status === 'SUCCESS') {
       const orderRecord = await Order.findOne({
-        where: { id: paymentRecord.orderId }
+        where: { id: paymentRecord.orderId, userId }
       });
       if (orderRecord.status === 'SUCCESS') {
-        return res.status(200).json({ message: "Order Successful", success: true, statuscode: 1  });
+        return res.status(200).json({ message: 'Order Successful', success: true, statuscode: 1 });
       }
-      if(orderRecord.status==='PENDING'){
-        return res.status(200).json({ message: "Order Pending", success: false, statuscode: 0  });
+      if (orderRecord.status === 'PENDING') {
+        return res.status(200).json({ message: 'Order Pending', success: false, statuscode: 0 });
       }
-      if(orderRecord.status==='FAILED'){
-        return res.status(200).json({ message: "Order Failed", success: false, statuscode: 2 });
+      if (orderRecord.status === 'FAILED') {
+        return res.status(200).json({ message: 'Order Failed', success: false, statuscode: 2 });
       }
     }
   } catch (error) {
