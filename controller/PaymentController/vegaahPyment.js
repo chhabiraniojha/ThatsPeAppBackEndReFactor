@@ -361,7 +361,7 @@ exports.vegaahCallback = async (req, res) => {
 };
 
 exports.paymentStausCheck = async (req, res) => {
-  const { paymentId } = req.params;
+  const { paymentId } = req.body;
   try {
     const user = req.user;
     const userId = user.id;
@@ -379,7 +379,7 @@ exports.paymentStausCheck = async (req, res) => {
   }
 };
 exports.orderStatusCheck = async (req, res) => {
-  const { paymentId } = req.params;
+  const { paymentId } = req.body;
   try {
      const user = req.user;
     const userId = user.id;
