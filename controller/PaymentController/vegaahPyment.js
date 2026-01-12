@@ -219,7 +219,7 @@ exports.vegaahCallback = async (req, res) => {
     // 1️⃣ Read callback payload
 
     const data = req.method === 'POST' ? req.body : req.query;
-    console.log('Vegaah Callback Received:', data);
+    console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
     const { resul, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
     // return res.status(200).send('recharge succes  calback check :)',data);
     // 2️⃣ Validate required fields
@@ -377,7 +377,7 @@ exports.paymentStatusCheck = async (req, res) => {
     });
 
     if (!paymentRecord) {
-      return res.status(404).json({
+      return res.status(200).json({
         success: false,
         message: 'Payment not found'
       });
