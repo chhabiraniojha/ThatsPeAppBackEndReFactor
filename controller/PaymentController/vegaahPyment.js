@@ -141,7 +141,7 @@ exports.payRequest = async (req, res) => {
       operatorType: rechargeType,
       operator: ezytm_operator_code,
       circle: ezytm_circle_code,
-      amount: 50,
+      amount: amount,
       status: 'CREATED'
     });
 
@@ -221,27 +221,7 @@ exports.vegaahCallback = async (req, res) => {
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
     const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
-    // return res.status(200).send('recharge succes  calback check :)',data);
-    // 2️⃣ Validate required fields
-    // if (!paymentId || !responseCode || !amount || !signature) {
-    //   return res.status(400).send('INVALID CALLBACK DATA');
-    // }
-
-    // // 3️⃣ Generate expected signature
-    // const merchantKey = process.env.VEGAH_SECRET_KEY.trim();
-
-    // const stringToHash = paymentId + '|' + merchantKey + '|' + responseCode + '|' + amount;
-
-    // const expectedSignature = crypto.createHash('sha256').update(stringToHash).digest('hex');
-
-    // // 4️⃣ Verify signature
-    // if (expectedSignature !== signature) {
-    //   console.error('Invalid Vegaah callback signature');
-    //   return res.status(400).send('INVALID SIGNATURE');
-    // }
-
-    // 5️⃣ Process payment result
-    // find the payment using transactionId
+   
     const paymentRecord = await Payment.findOne({
       where: { gatewayTransactionId: transactionId }
     });
@@ -332,6 +312,26 @@ exports.vegaahCallback = async (req, res) => {
       // recharge logic here
       //update order table status to success after recharge
       //generate  random number from 1 to 3 to simulate recharge success or failure
+      // lets rady the data for recharge 
+      let  apiDataForRecharge= {
+        ezytm_circle_code: orderCircle,
+        ezytm_operator_code: orderOperator,   
+        customer_number: orderServiceRef,
+        amount: orderAmount,
+        paymentTransactionId: transactionId,
+        subCategoryId: orderServiceType,
+        transactionType: 'RECHARGE',
+        status: 'SUCCESS',  
+        rechargeType: orderOperatorType,
+        discountedAmount: paymentAmount,
+        userId: orderUserId,
+        finalAmount: paymentAmount
+      }
+      console.log('API DATA FOR RECHARGE:--->', apiDataForRecharge);
+
+      //  const rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`, { ezytm_circle_code, ezytm_operator_code, customer_number, amount, paymentTransactionId, subCategoryId, transactionType, status, rechargeType, discountedAmount, userId, finalAmount })
+
+
       const rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
 
       await orderRecord.update(
@@ -359,7 +359,7 @@ exports.vegaahCallback = async (req, res) => {
     // return res.status(200).send('OK');
   } catch (error) {
     console.error('Callback Error:', error);
-    return res.status(500).send('SERVER ERROR');
+    return res.status(500).json({ message: "Internal Server Error", success: false, statuscode: 0, error: error });
   }
 };
 
