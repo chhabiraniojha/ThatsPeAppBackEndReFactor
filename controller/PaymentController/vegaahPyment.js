@@ -312,7 +312,7 @@ exports.vegaahCallback = async (req, res) => {
 
       await orderRecord.update(
         {
-          status: 'PENDING'
+          status: 'PROCESSING'
         },
         { where: { id: orderId } }
       );
@@ -327,7 +327,7 @@ exports.vegaahCallback = async (req, res) => {
       event === 'Transaction.Success' &&
       result === 'SUCCESS' &&
       paymentRecord.status === 'SUCCESS' &&
-      orderRecord.status === 'PENDING'
+      orderRecord.status === 'PROCESSING'
     ) {
       // recharge logic here
       //update order table status to success after recharge
@@ -388,7 +388,7 @@ exports.paymentStatusCheck = async (req, res) => {
       return res.status(200).json({
         message: 'Payment Successful',
         success: true,
-        statuscode: 0
+        statuscode: 1
       });
     }
 
@@ -400,11 +400,11 @@ exports.paymentStatusCheck = async (req, res) => {
         statuscode: 0
       });
     }
-    if (paymentRecord.status === 'INITIATED') {
+    if (paymentRecord.status === 'PROCESSING') {
       return res.status(200).json({
-        message: 'Payment is still initiated',
+        message: 'Payment is still Processing ',
         success: false,
-        statuscode: 0
+        statuscode: 2
       });
     }
   } catch (error) {
@@ -434,6 +434,9 @@ exports.orderStatusCheck = async (req, res) => {
       const orderRecord = await Order.findOne({
         where: { id: paymentRecord.orderId, userId }
       });
+      if (orderRecord.status === 'PROCESSING') {
+        return res.status(200).json({ message: 'Order is PROCESSING', success: false });
+      }
       if (orderRecord.status === 'SUCCESS') {
         return res.status(200).json({ message: 'Order Successful', success: true, statuscode: 1 });
       }
