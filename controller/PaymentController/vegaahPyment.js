@@ -400,6 +400,13 @@ exports.paymentStatusCheck = async (req, res) => {
         statuscode: 0
       });
     }
+    if (paymentRecord.status === 'INITIATED') {
+      return res.status(200).json({
+        message: 'Payment is still initiated',
+        success: false,
+        statuscode: 0
+      });
+    }
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -436,6 +443,7 @@ exports.orderStatusCheck = async (req, res) => {
       if (orderRecord.status === 'FAILED') {
         return res.status(200).json({ message: 'Order Failed', success: false, statuscode: 2 });
       }
+       
     }
   } catch (error) {
     return res.status(500).json({ error, message: 'Internal Server Error' });
