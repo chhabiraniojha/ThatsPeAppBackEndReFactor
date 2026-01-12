@@ -404,9 +404,11 @@ exports.paymentStatusCheck = async (req, res) => {
       return res.status(200).json({
         message: 'Payment is still pending',
         success: false,
-        statuscode: 2
+        statuscode: 0
       });
     }
+
+  
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -441,12 +443,11 @@ exports.orderStatusCheck = async (req, res) => {
         return res.status(200).json({ message: 'Order Successful', success: true, statuscode: 1 });
       }
       if (orderRecord.status === 'PENDING') {
-        return res.status(200).json({ message: 'Order Pending', success: false, statuscode: 0 });
+        return res.status(200).json({ message: 'Order Pending', success: false, statuscode: 2 });
       }
       if (orderRecord.status === 'FAILED') {
-        return res.status(200).json({ message: 'Order Failed', success: false, statuscode: 2 });
+        return res.status(200).json({ message: 'Order Failed', success: false, statuscode: 0 });
       }
-       
     }
   } catch (error) {
     return res.status(500).json({ error, message: 'Internal Server Error' });
