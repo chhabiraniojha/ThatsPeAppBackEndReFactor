@@ -220,7 +220,7 @@ exports.vegaahCallback = async (req, res) => {
 
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
-    const { resul, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
+    const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
     // return res.status(200).send('recharge succes  calback check :)',data);
     // 2️⃣ Validate required fields
     // if (!paymentId || !responseCode || !amount || !signature) {
@@ -247,7 +247,7 @@ exports.vegaahCallback = async (req, res) => {
     });
     console.log('PAYMENT RECORD FOUND:', paymentRecord);
     if (!paymentRecord) {
-      console.error('Payment record not found for transactionId:', transactionId);
+      console.log('Payment record not found for transactionId:', transactionId);
       return res.status(200).send('PAYMENT RECORD NOT FOUND');
     }
     const paymentId = paymentRecord.id;
@@ -289,12 +289,12 @@ exports.vegaahCallback = async (req, res) => {
       console.error('Order record not found for orderId:', orderId);
       return res.status(200).json('ORDER RECORD NOT FOUND');
     }
-    //now  check the  anout and response code  and  other details like event resul and  payment table status  then update the payment table
+    //now  check the  anout and response code  and  other details like event result and  payment table status  then update the payment table
     if (
       // paymentAmount == amount &&
       responseCode === '000' &&
       event === 'Transaction.Success' &&
-      resul === 'SUCCESS' &&
+      result === 'SUCCESS' &&
       orderStatus === 'CREATED'
     ) {
       //update payment table status to success
@@ -325,7 +325,7 @@ exports.vegaahCallback = async (req, res) => {
     if (
       responseCode === '000' &&
       event === 'Transaction.Success' &&
-      resul === 'SUCCESS' &&
+      result === 'SUCCESS' &&
       paymentRecord.status === 'SUCCESS' &&
       orderRecord.status === 'PENDING'
     ) {
