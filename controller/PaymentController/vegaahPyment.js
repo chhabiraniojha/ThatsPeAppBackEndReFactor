@@ -400,9 +400,9 @@ exports.paymentStatusCheck = async (req, res) => {
         statuscode: 0
       });
     }
-    if (paymentRecord.status === 'PROCESSING') {
+    if (paymentRecord.status === 'PENDING') {
       return res.status(200).json({
-        message: 'Payment is still Processing ',
+        message: 'Payment is still pending',
         success: false,
         statuscode: 2
       });
