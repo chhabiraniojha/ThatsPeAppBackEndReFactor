@@ -5,7 +5,7 @@ exports.addToWalletVarifay = async (req, res) => {
  const user = req.user;
 try {
     if(user.mobileNo=='9938300x585'){
-        return res.status(200).json({ success: true, message: "user allowed to add ammount to wallet ",statuscode:1 });
+        return res.status(200).json({ success: false, message: "user allowed to add ammount to wallet ",statuscode:0 });
     }
     const checkTranscation = await AlltranscationModel.findOne({ where: { UserId: user.id } });
     console.log("checkTranscation---",checkTranscation);
