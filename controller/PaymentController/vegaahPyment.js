@@ -286,7 +286,7 @@ exports.vegaahCallback = async (req, res) => {
           rrn: rrn,
           rawCallback: data,
           responseCode: responseCode,
-          useId: orderUserId,
+          userId: orderUserId,
         },
         { where: { gatewayTransactionId: transactionId } }
       );

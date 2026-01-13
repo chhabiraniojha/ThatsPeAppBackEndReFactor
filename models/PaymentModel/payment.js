@@ -1,10 +1,11 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../util/db_connect');
 const Order = require('../OrderModel/order');
+const User = require('../UserModels/UserSchema/user');
 
 const Payment = sequelize.define('Payment', {
   id: {
-    type: DataTypes.STRING,    
+    type: DataTypes.STRING,
     primaryKey: true
   },
 
@@ -12,7 +13,17 @@ const Payment = sequelize.define('Payment', {
     type: DataTypes.STRING(50),
     allowNull: true,
     references: {
-      model: Order,          // refers to orders table
+      model: Order, // refers to orders table
+      key: 'id'
+    },
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
+  },
+  userId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    references: {
+      model: User,
       key: 'id'
     },
     onDelete: 'SET NULL',
@@ -51,13 +62,19 @@ const Payment = sequelize.define('Payment', {
     allowNull: false,
     defaultValue: 'INITIATED'
   },
-
+  isUsed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  purpose: {
+    type: DataTypes.ENUM('recharge', 'addfund'),
+    allowNull: true
+  },
   responseCode: {
     type: DataTypes.STRING(10),
     allowNull: true
   },
-
-
 
   rawCallback: {
     type: DataTypes.JSON,
