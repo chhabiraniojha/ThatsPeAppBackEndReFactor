@@ -5,7 +5,8 @@ const Payment = require('../../models/PaymentModel/payment');
 const requestIp = require('request-ip');
 const UIDGenerator = require('../../util/uidGenerator');
 const operatorModel = require('../../models/OperatorDataModel/operatorData');
-const { or } = require('sequelize');
+ 
+ 
 
 exports.generateSignature = async (req, res) => {
   try {
@@ -284,7 +285,8 @@ exports.vegaahCallback = async (req, res) => {
           status: 'SUCCESS',
           rrn: rrn,
           rawCallback: data,
-          responseCode: responseCode
+          responseCode: responseCode,
+          useId: orderUserId,
         },
         { where: { gatewayTransactionId: transactionId } }
       );

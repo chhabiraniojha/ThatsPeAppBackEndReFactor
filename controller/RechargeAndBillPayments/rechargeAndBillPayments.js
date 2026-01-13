@@ -51,6 +51,7 @@ console.log("req.body--------------------------------->>", req.body)
                 //     }
                 // })
 
+                console.log("paymentTransaction--", paymentTransactionId,userId);
                 paymentTransaction = await paymentModel.findOne({
                     where: {
                         gatewayTransactionId: paymentTransactionId,
