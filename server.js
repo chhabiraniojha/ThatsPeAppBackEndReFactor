@@ -49,6 +49,7 @@ const refundbyAdmin = require('./routes/RefundbyAdmin/refundbyAdmin')
 const userManagement = require('./routes/UserManagementRoute/userRouter')
 const adminAnalytic = require('./routes/AdminAnalyticsRoute/AdminAnalyticsRoute')
 const notification = require('./routes/NotificationRoute/notification')
+const addTowallet = require('./routes/AddtoWalletRoutes/addToWallet')
 const { initializeSocket } = require('./util/socket');    
   
 
@@ -101,7 +102,7 @@ app.set('trust proxy', true);
 
 
 // All routes
-app.use('/user', userRoutes)
+app.use('/user', userRoutes,addTowallet)
 app.use('/user/wallet', walletRoute)
 app.use('/user/wallet-transaction', walletTransactionRoute)
 app.use('/user/mobile-recharge-transaction', mobileRechargeTransactionRoute)
