@@ -57,7 +57,7 @@ console.log("req.body--------------------------------->>", req.body)
                         userId: userId
                     }
                 })
-                if (paymentTransaction.isUsed && paymentTransaction.status != 'SUCCESS') {
+                if (paymentTransaction.isUsed && paymentTransaction.status == 'SUCCESS') {
                     return res.status(200).json({ message: "Action Already Done For This Payment Transaction or Payment is Unsuccessfull", success: false, statuscode: 0 })
                 }
             }
