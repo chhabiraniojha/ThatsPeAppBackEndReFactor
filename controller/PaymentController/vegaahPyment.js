@@ -5,6 +5,7 @@ const Payment = require('../../models/PaymentModel/payment');
 const requestIp = require('request-ip');
 const UIDGenerator = require('../../util/uidGenerator');
 const operatorModel = require('../../models/OperatorDataModel/operatorData');
+const { set } = require('../../routes/PaymentRoutes/payment');
  
  
 
@@ -326,13 +327,16 @@ exports.vegaahCallback = async (req, res) => {
       };
       console.log('API DATA FOR RECHARGE:--->', apiDataForRecharge);
 
-      const rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`, apiDataForRecharge);
-
-      const rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
-      console.log('recharge response-----------xxx', rechargeResponse);
+      // const rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`, apiDataForRecharge);
+     await new Promise(resolve => setTimeout(resolve, 3000));
+      let rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+  
+      // console.log('recharge response-----------xxx', rechargeResponse);
+      console.log('recharge response-----------xxx', rechargeResult);
       await orderRecord.update(
         {
-          status: rechargeResponse?.data?.statuscode == 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode == 0 ? 'FAILED' : 'PENDING'
+          status: rechargeResult == 1 ? 'SUCCESS' : rechargeResult == 0 ? 'FAILED' : 'PENDING'
+          // status: rechargeResponse?.data?.statuscode == 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode == 0 ? 'FAILED' : 'PENDING'
         },
         { where: { id: orderId } }
       );
