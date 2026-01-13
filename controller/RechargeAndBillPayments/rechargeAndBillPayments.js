@@ -3,6 +3,7 @@ const circleModel = require('../../models/CircleDataModel/circleData')
 const axios = require('axios')
 const paymentTransactionModel = require('../../models/PaymentTransactionModel/paymentTransaction')
 const walletTransactionModel = require('../../models/WalletModels/Wallet Transaction/walletTransaction')
+const paymentModel = require('../../models/PaymentModel/payment')
 const walletController = require('../../controller/WalletController/wallet')
 
 
@@ -19,7 +20,7 @@ exports.rchargeAndBillPayments = async (req, res) => {
     let walletTransactionId
     let walletDebitResponse
 
-
+console.log("req.body--------------------------------->>", req.body)
 
 
     try {
@@ -42,13 +43,21 @@ exports.rchargeAndBillPayments = async (req, res) => {
 
             // Checking The Paymet Traction  Is Used Or Not 
             if (transactionType == "cash") {
-                paymentTransaction = await paymentTransactionModel.findOne({
+                //payment transcation model is old barcode system 
+                // paymentTransaction = await paymentTransactionModel.findOne({
+                //     where: {
+                //         id: paymentTransactionId,
+                //         UserId: userId
+                //     }
+                // })
+
+                paymentTransaction = await paymentModel.findOne({
                     where: {
-                        id: paymentTransactionId,
-                        UserId: userId
+                        gatewayTransactionId: paymentTransactionId,
+                        userId: userId
                     }
                 })
-                if (paymentTransaction.isUsed && paymentTransaction.status != 'success') {
+                if (paymentTransaction.isUsed && paymentTransaction.status != 'SUCCESS') {
                     return res.status(200).json({ message: "Action Already Done For This Payment Transaction or Payment is Unsuccessfull", success: false, statuscode: 0 })
                 }
             }
@@ -153,6 +162,7 @@ exports.rchargeAndBillPayments = async (req, res) => {
                 }
             }
             else {
+                console.log("Cash Payment Initiate Transaction start --------->")    
                 // Intial recharge transation create 
                 initiateTransaction = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/initiate-mobile-recharge-transaction`, {
                     circleCode: a1CircleCode,//cyrusCircleCode,
@@ -173,7 +183,7 @@ exports.rchargeAndBillPayments = async (req, res) => {
                 })
             }
 
-
+  console.log("Cash Payment Initiate Transaction END -----xxxx---->")  
 
             // console.log(initiateTransaction);
 

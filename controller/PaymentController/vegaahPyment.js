@@ -199,6 +199,7 @@ exports.payRequest = async (req, res) => {
     const paymentData = await Payment.create({
       id: paymentId,
       orderId: orderId,
+      userId: userId,
       gateway: 'VEGAH',
       paymentMode: 'UPI',
       gatewayTransactionId: payRequestResponse?.data?.transactionId,
@@ -221,7 +222,7 @@ exports.vegaahCallback = async (req, res) => {
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
     const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
-   
+
     const paymentRecord = await Payment.findOne({
       where: { gatewayTransactionId: transactionId }
     });
@@ -302,48 +303,41 @@ exports.vegaahCallback = async (req, res) => {
 
     // now  we move recharge  if payment success and then update the order table status
 
-    if (
-      responseCode === '000' &&
-      event === 'Transaction.Success' &&
-      result === 'SUCCESS' &&
-      paymentRecord.status === 'SUCCESS' &&
-      orderRecord.status === 'PROCESSING'
-    ) {
+    if (responseCode === '000' && event === 'Transaction.Success' &&result === 'SUCCESS' &&paymentRecord.status === 'SUCCESS' && orderRecord.status === 'PROCESSING'  ) {
       // recharge logic here
       //update order table status to success after recharge
       //generate  random number from 1 to 3 to simulate recharge success or failure
-      // lets rady the data for recharge 
-      let  apiDataForRecharge= {
+      // lets rady the data for recharge
+      let apiDataForRecharge = {
         ezytm_circle_code: orderCircle,
-        ezytm_operator_code: orderOperator,   
+        ezytm_operator_code: orderOperator,
         customer_number: orderServiceRef,
         amount: orderAmount,
         paymentTransactionId: transactionId,
         subCategoryId: orderServiceType,
-        transactionType: 'RECHARGE',
-        status: 'SUCCESS',  
+        transactionType: 'cash',
+        status: 'pending',
         rechargeType: orderOperatorType,
         discountedAmount: paymentAmount,
         userId: orderUserId,
         finalAmount: paymentAmount
-      }
+      };
       console.log('API DATA FOR RECHARGE:--->', apiDataForRecharge);
 
-      //  const rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`, { ezytm_circle_code, ezytm_operator_code, customer_number, amount, paymentTransactionId, subCategoryId, transactionType, status, rechargeType, discountedAmount, userId, finalAmount })
-
+      const rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`, apiDataForRecharge);
 
       const rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
-
+      console.log('recharge response-----------xxx', rechargeResponse);
       await orderRecord.update(
         {
-          status: rechargeResult === 1 ? 'SUCCESS' : rechargeResult === 2 ? 'FAILED' : 'PENDING'
+          status: rechargeResponse?.data?.statuscode == 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode == 0 ? 'FAILED' : 'PENDING'
         },
         { where: { id: orderId } }
       );
 
       await orderRecord.save();
 
-      return res.status(200).json({ message: 'recharge succes  :)', status: 'false' });
+      return res.status(200).json({ message: 'recharge succes  :)', status: 'true' });
       // TODO:
       // 1. Check if transaction already processed
       // 2. Mark transaction SUCCESS in DB
@@ -359,7 +353,7 @@ exports.vegaahCallback = async (req, res) => {
     // return res.status(200).send('OK');
   } catch (error) {
     console.error('Callback Error:', error);
-    return res.status(500).json({ message: "Internal Server Error", success: false, statuscode: 0, error: error });
+    return res.status(500).json({ message: 'Internal Server Error', success: false, statuscode: 0, error: error });
   }
 };
 
@@ -407,8 +401,6 @@ exports.paymentStatusCheck = async (req, res) => {
         statuscode: 0
       });
     }
-
-  
   } catch (error) {
     console.error(error);
     return res.status(500).json({

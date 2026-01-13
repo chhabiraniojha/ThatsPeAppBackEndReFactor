@@ -69,19 +69,19 @@ const RechargeAndBillPayTransaction = sequelize.define("AllTransactions", {
     allowNull: false,
     defaultValue: false,
   },
-  // userId: {
-  //     type: DataTypes.STRING,
-  //     allowNull: false
+  userId: {
+      type: DataTypes.STRING,
+      allowNull: false
 
-  // },
-  // availableAPIId: {
-  //     type: DataTypes.STRING,
-  //     allowNull: true
-  // },
-  // subCategoryId: {
-  //     type: DataTypes.STRING,
-  //     allowNull: false
-  // }
+  },
+  availableAPIId: {
+      type: DataTypes.STRING,
+      allowNull: true
+  },
+  subCategoryId: {
+      type: DataTypes.STRING,
+      allowNull: false
+  }
 });
 
 module.exports = RechargeAndBillPayTransaction;

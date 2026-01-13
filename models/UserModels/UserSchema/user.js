@@ -21,12 +21,17 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,      
         allowNull: false
     }, 
- 
- 
+
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         allowNull: false
-    }
+    },
+    effective_from: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+    },
+
 })
 
 module.exports = User

@@ -4,7 +4,7 @@ const AlltranscationModel = require('../../models/RechargeAndBillPaymentTransact
 exports.addToWalletVarifay = async (req, res) => {
  const user = req.user;
 try {
-    if(user.mobileNo=='9938300x585'){
+    if(user.mobileNo=='9938300585'){
         return res.status(200).json({ success: false, message: "user allowed to add ammount to wallet ",statuscode:0 });
     }
     const checkTranscation = await AlltranscationModel.findOne({ where: { UserId: user.id } });
