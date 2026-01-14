@@ -71,6 +71,7 @@ exports.payRequest = async (req, res) => {
         message: 'Missing Recharge Details '
       });
     }
+
     if (purpose == 'addfund' && !(amount && paymentTransactionId && userId)) {
       return res.status(200).json({
         success: false,
@@ -207,6 +208,7 @@ exports.payRequest = async (req, res) => {
       gatewayTransactionId: payRequestResponse?.data?.transactionId,
       amount: finalAmount,
       status: 'INITIATED',
+      purpose: purpose,
       responseCode: payRequestResponse?.data?.responseCode,
       rawCallback: payRequestResponse.data
     });
@@ -220,7 +222,6 @@ exports.payRequest = async (req, res) => {
 exports.vegaahCallback = async (req, res) => {
   try {
     // 1️⃣ Read callback payload
-
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
     const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
