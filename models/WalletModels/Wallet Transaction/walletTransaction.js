@@ -58,13 +58,13 @@ const WalletTransaction = sequelize.define('WalletTransaction', {
   paymentTransactionId: {
     type: DataTypes.STRING,
     allowNull: true,
-    unique: 'unique_WalletTransaction_paymentTransactionId',
-    references: {
-      model: PaymentTransactionModel,
-      key: 'id'
-    },
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE'
+    // unique: 'unique_WalletTransaction_paymentTransactionId',
+    // references: {
+    //   model: PaymentTransactionModel,
+    //   key: 'id'
+    // },
+    // onDelete: 'SET NULL',
+    // onUpdate: 'CASCADE'
   },
   status: {
     type: DataTypes.ENUM('pending', 'success', 'failed'),

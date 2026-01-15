@@ -4,6 +4,7 @@ const paymentTransactionModel = require('../../models/PaymentTransactionModel/pa
 const allTransactionsModel = require('../../models/RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
 const paymentModel = require('../../models/PaymentModel/payment');
 const walletTransactionModel = require('../../models/WalletModels/Wallet Transaction/walletTransaction');
+
 let uid = require('../../util/uidGenerator');
 const { default: axios } = require('axios');
 const subCategory = require('../../models/SubCategoryModel/subCategory');
@@ -190,7 +191,7 @@ exports.debitAmount = async ({ deductAmount, rechargeTypeId, purpose, userId }) 
 exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
   // const user = req.user
   // let { amount, paymentTransactionId, userId } = req.body
-
+  console.log('Add Fund Request Details:', { amount, paymentTransactionId, userId });
   try {
     if (!amount || !paymentTransactionId) {
       return { message: 'Please Provied The Valied Details', success: false, statuscode: 0 };
@@ -209,13 +210,20 @@ exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
     }
     const startingBalance = wallet.amount;
     // console.log(startingBalance);
-    const paymentTransaction = await paymentTransactionModel.findOne({
+    const paymentTransaction = await paymentModel.findOne({
       where: {
-        id: paymentTransactionId,
-        UserId: userId
+        gatewayTransactionId: paymentTransactionId,
+        userId: userId
       }
     });
+    if (!paymentTransaction) {
+      return { message: 'Payment transaction not found', success: false, statuscode: 0 };
+    }
 
+    console.log('Payment Transaction Details:', paymentTransaction?.dataValues?.id);
+
+
+    // return { message: 'check new paymenttranscation ', success: false, statuscode: 0, paymentTransaction };
     const initiateWalletTransaction = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet-transaction/initiate`, {
       walletId: wallet.id,
       amount: amount,
@@ -236,7 +244,7 @@ exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
       });
       return { message: 'Payment Transaction Details Not Found', success: false, statuscode: 0 };
     }
-    if (paymentTransaction.status != 'success') {
+    if (paymentTransaction?.dataValues?.status != 'SUCCESS') {
       await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet-transaction/update`, {
         walletTransactionId: initiateWalletTransaction.data.walletTransactionId,
         endingBalance: startingBalance,
@@ -245,7 +253,7 @@ exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
       });
       return { message: 'Payment Not Received', success: false, statuscode: 0 };
     }
-    if (paymentTransaction.isUsed) {
+    if (paymentTransaction?.dataValues?.isUsed) {
       await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet-transaction/update`, {
         walletTransactionId: initiateWalletTransaction.data.walletTransactionId,
         endingBalance: startingBalance,
@@ -410,10 +418,12 @@ exports.refund = async (req, res) => {
     }
     // console.log(transactionDetails);
     const paymentTransactionType = transactionDetails.dataValues.paymentTransactionType;
-    console.log("paymentTransactionType--", paymentTransactionType);
+    console.log('paymentTransactionType--', paymentTransactionType);
     let amount = 0;
     if (paymentTransactionType == 'cash') {
-      const paymentTransactionDetails = await paymentModel.findOne({ where: { gatewayTransactionId: transactionDetails.dataValues.cashPaymentTransactionId } });
+      const paymentTransactionDetails = await paymentModel.findOne({
+        where: { gatewayTransactionId: transactionDetails.dataValues.cashPaymentTransactionId }
+      });
       // console.log("paymentTransactionDetails--", paymentTransactionDetails);
       amount = paymentTransactionDetails.dataValues.amount;
       // console.log("amount --", amount);
@@ -438,8 +448,6 @@ exports.refund = async (req, res) => {
     console.log(startingBalance);
 
     if (initiateRefundTransaction.data.statuscode != 1) {
-     
-
       const updateRefundTransaction = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet-transaction/update`, {
         walletTransactionId: initiateRefundTransaction.data.walletTransactionId,
         endingBalance: startingBalance,
@@ -450,7 +458,7 @@ exports.refund = async (req, res) => {
       return res.status(200).json({ message: 'Could not perform refund. Conatct support', success: false, statuscode: 0 });
     }
     const endingBalance = startingBalance + amount;
-    
+
     // console.log(endingBalance);
 
     await getUserWallet.update({
@@ -470,7 +478,7 @@ exports.refund = async (req, res) => {
 
     return res.status(200).json({ message: 'Refund amount credited successfully', success: true, statuscode: 1 });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(500).json({ message: 'Internal Server Error', success: false, error });
   }
 };
