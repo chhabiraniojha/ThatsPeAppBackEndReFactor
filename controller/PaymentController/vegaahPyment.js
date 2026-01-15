@@ -138,11 +138,11 @@ exports.payRequest = async (req, res) => {
         status: 'CREATED'
       });
     } else if (purpose == 'addfund') {
-      const wallet = await walletModel.findOne({ where: { userId: userId } });     
-      if (!wallet) {  
+      const wallet = await walletModel.findOne({ where: { userId: userId } });
+      if (!wallet) {
         return res.status(200).json({ message: 'No wallet found for user', success: false, statuscode: 0 });
       }
-      console.log('WALLET FOUND FOR USER:', wallet?.dataValues?.id);  
+      console.log('WALLET FOUND FOR USER:', wallet?.dataValues?.id);
       orderData = await walletOrderModel.create({
         id: walletOrderId,
         userId: userId,
@@ -423,7 +423,11 @@ exports.vegaahCallback = async (req, res) => {
       // add fund process
       else if (purpose == 'addfund') {
         //wallet add fund process
-        const addFundResponse = await walletController.addFund({ amount:dataForWalletAdd.amount,  paymentTransactionId:dataForWalletAdd.transactionId, userId:dataForWalletAdd.userId });
+        const addFundResponse = await walletController.addFund({
+          amount: dataForWalletAdd.amount,
+          paymentTransactionId: dataForWalletAdd.transactionId,
+          userId: dataForWalletAdd.userId
+        });
         console.log('Add Fund Response:', addFundResponse);
         await walletOrderRecord.update(
           {
@@ -433,7 +437,6 @@ exports.vegaahCallback = async (req, res) => {
         );
         await walletOrderRecord.save();
       }
-
 
       return res.status(200).json({ message: 'recharge succes  :)', status: 'true' });
       // TODO:
@@ -522,10 +525,18 @@ exports.orderStatusCheck = async (req, res) => {
     if (!paymentRecord) {
       return res.status(404).json({ message: 'Payment not found', success: false });
     }
+    let orderRecord;
     if (paymentRecord.status === 'SUCCESS') {
-      const orderRecord = await Order.findOne({
-        where: { id: paymentRecord.orderId, userId }
-      });
+      if (paymentRecord.purpose === 'recharge') {
+        orderRecord = await Order.findOne({
+          where: { id: paymentRecord.orderId, userId }
+        });
+      } else if (paymentRecord.purpose === 'addfund') {
+        orderRecord = await walletOrderModel.findOne({
+          where: { id: paymentRecord.walletOrderId, userId }
+        });
+      }
+
       if (orderRecord.status === 'PROCESSING') {
         return res.status(200).json({ message: 'Order is PROCESSING', success: false });
       }
@@ -540,6 +551,7 @@ exports.orderStatusCheck = async (req, res) => {
       }
     }
   } catch (error) {
+    // console.error('Order Status Check Error:', error);  
     return res.status(500).json({ error, message: 'Internal Server Error' });
   }
 };
