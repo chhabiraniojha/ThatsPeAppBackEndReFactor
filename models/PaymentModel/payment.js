@@ -2,6 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../../util/db_connect');
 const Order = require('../OrderModel/order');
 const User = require('../UserModels/UserSchema/user');
+const WalletOrder = require('../OrderModel/walletOrder');
 
 const Payment = sequelize.define('Payment', {
   id: {
@@ -14,6 +15,16 @@ const Payment = sequelize.define('Payment', {
     allowNull: true,
     references: {
       model: Order, // refers to orders table
+      key: 'id'
+    },
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
+  },
+  walletOrderId: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    references: {
+      model: WalletOrder, // refers to orders table
       key: 'id'
     },
     onDelete: 'SET NULL',
