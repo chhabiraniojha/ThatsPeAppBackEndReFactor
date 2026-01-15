@@ -275,24 +275,26 @@ exports.getBillInfo = async (req, res) => {
     const billData = await axios.get(
       `https://planapi.in/api/Mobile/BillCheck?apimember_id=5679&api_password=rinku9938300585&operator_code=${operatorCode}&Accountno=${Accountno}`
     );
+    console.log(billData);
     let data = await billData.data;
-    if (data.STATUS == "3") {
-      data = {
-        ERROR: "0",
-        STATUS: "1",
-        BILLDEATILS: {
-          Name: "Dummmy Name",
-          DueAmount: "560.00",
-          DueDate: "2024-11-22",
-          BillNumber: Accountno,
-          BillDate: "NA",
-          Balance: "0",
-          BillPeriod: null,
-        },
-        ORDERID: null,
-        MESSAGE: "Bill Fetch Processed",
-      };
-    }
+
+    // if (data.STATUS == "3") {
+    //   data = {
+    //     ERROR: "0",
+    //     STATUS: "1",
+    //     BILLDEATILS: {
+    //       Name: "Dummmy Name",
+    //       DueAmount: "560.00",
+    //       DueDate: "2024-11-22",
+    //       BillNumber: Accountno,
+    //       BillDate: "NA",
+    //       Balance: "0",
+    //       BillPeriod: null,
+    //     },
+    //     ORDERID: null,
+    //     MESSAGE: "Bill Fetch Processed",
+    //   };
+    // }
     // console.log(data);
     return res.status(200).json({
       message: "Bill Details fetch successfully",
@@ -317,7 +319,7 @@ exports.getDthBillInfo = async (req, res) => {
     // console.log(operatorCode);
 
     const dthBillData = await axios.get(
-      `http://planapi.in/api/Mobile/DTHINFOCheck?apimember_id=5679&api_password=rinku9938300585&Opcode=${operatorCode}&mobile_no=${Accountno}`
+      `https://planapi.in/api/Mobile/DTHINFOCheck?apimember_id=5679&api_password=rinku9938300585&Opcode=${operatorCode}&mobile_no=${Accountno}`
     );
 
     let data = await dthBillData.data;

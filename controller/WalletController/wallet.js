@@ -382,11 +382,11 @@ exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
   </body>
 </html>
 `;
-    await sendEmail({
-      email: 'sudhanshuojha7234@gmail.com',
-      subject: 'Recharge Successful – Receipt from ThatSpe',
-      html: html
-    });
+    // await sendEmail({
+    //   email: 'sudhanshuojha7234@gmail.com',
+    //   subject: 'Recharge Successful – Receipt from ThatSpe',
+    //   html: html
+    // });
     return {
       message: `Rs. ${amount} added to your wallet successfully`,
       success: true,
