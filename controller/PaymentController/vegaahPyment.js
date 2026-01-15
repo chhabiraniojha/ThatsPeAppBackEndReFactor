@@ -142,6 +142,7 @@ exports.payRequest = async (req, res) => {
       if (!wallet) {  
         return res.status(200).json({ message: 'No wallet found for user', success: false, statuscode: 0 });
       }
+      console.log('WALLET FOUND FOR USER:', wallet?.dataValues?.id);  
       orderData = await walletOrderModel.create({
         id: walletOrderId,
         userId: userId,
