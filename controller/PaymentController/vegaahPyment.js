@@ -138,21 +138,21 @@ exports.payRequest = async (req, res) => {
         status: 'CREATED'
       });
     } else if (purpose == 'addfund') {
-      const wallet = await walletModel.findOne({ where: { userId: userId } });
+      const wallet = await walletModel.findOne({ where: { userId: userId } });     
       if (!wallet) {  
         return res.status(200).json({ message: 'No wallet found for user', success: false, statuscode: 0 });
       }
       orderData = await walletOrderModel.create({
         id: walletOrderId,
         userId: userId,
-        walletId: wallet.id,
+        walletId: wallet?.dataValues?.id,
         amount: amount,
         walletAction: 'ADD',
         status: 'CREATED'
       });
     }
 
-    console.log('ORDER DATA CREATED:', orderData);
+    // console.log('ORDER DATA CREATED:', orderData);
 
     // payload for generate signature
     const payload = {
@@ -200,7 +200,7 @@ exports.payRequest = async (req, res) => {
       'https://checkout.vegaah.com/vegaahpayments/v2/payments/pay-request',
       payRequestRequiredData
     );
-    console.log('PAY REQUEST RESPONSE:--->', payRequestResponse.data);
+    // console.log('PAY REQUEST RESPONSE:--->', payRequestResponse.data);
     // initiate payment table entry
     const paymentId = await UIDGenerator();
     let paymentData;
