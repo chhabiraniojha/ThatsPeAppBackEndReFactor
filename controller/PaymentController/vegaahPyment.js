@@ -95,7 +95,7 @@ exports.payRequest = async (req, res) => {
         finalAmount = amount - discountAmount;
       }
       finalAmount = Math.ceil(finalAmount * 10) / 10;
-      console.log('FINAL AMOUNT AFTER DISCOUNT:--->', finalAmount);
+      // console.log('FINAL AMOUNT AFTER DISCOUNT:--->', finalAmount);
       if (discountedAmount != finalAmount) {
         return res.status(200).json({
           success: false,
@@ -142,7 +142,7 @@ exports.payRequest = async (req, res) => {
       if (!wallet) {
         return res.status(200).json({ message: 'No wallet found for user', success: false, statuscode: 0 });
       }
-      console.log('WALLET FOUND FOR USER:', wallet?.dataValues?.id);
+      // console.log('WALLET FOUND FOR USER:', wallet?.dataValues?.id);
       orderData = await walletOrderModel.create({
         id: walletOrderId,
         userId: userId,
