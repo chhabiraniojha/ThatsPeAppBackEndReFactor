@@ -7,7 +7,7 @@ const Authenticate = async (req, res, next) => {
    const type = req.header('type');
    try {
 
-      // console.log(token)
+      console.log(token)
 
       // Check if token exists
       if (!token) {

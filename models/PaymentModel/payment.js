@@ -56,6 +56,7 @@ const Payment = sequelize.define('Payment', {
       model: PaymentGateway,
       key: 'id'
     },
+    defaultValue: 'BqvhSS7CPJu2UEZmjmQhfg',  // this is only  for vegah upi  BUT in future if we add more gateways we can change this value accordingly
     onDelete: 'CASCADE',
     onUpdate: 'CASCADE'
   },

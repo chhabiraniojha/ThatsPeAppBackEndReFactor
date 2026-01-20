@@ -169,7 +169,7 @@ exports.payRequest = async (req, res) => {
     const dataToHash =
       payload.trackId + '|' + payload.terminalId + '|' + payload.password + '|' + secretKey + '|' + payload.amount + '|' + payload.currency;
 
-    console.log('STRING TO HASH:--->', dataToHash);
+    // console.log('STRING TO HASH:--->', dataToHash);
     if (!payload) {
       return res.status(400).json({
         message: 'Payload is required'
