@@ -3,7 +3,7 @@ const sequelize = require('../../util/db_connect')
 const User = require('../UserModels/UserSchema/user');
 
 
-const PaymentTransaction = sequelize.define('paymentTransaction', {
+const PaymentTransaction = sequelize.define('PaymentTransaction', {
     id: {
         type: DataTypes.STRING,
         primaryKey: true
@@ -26,7 +26,7 @@ const PaymentTransaction = sequelize.define('paymentTransaction', {
         allowNull: false,
         defaultValue:false
     },
-    UserId: {
+    userId: {
         type: DataTypes.STRING,
         allowNull: false,
         references: {

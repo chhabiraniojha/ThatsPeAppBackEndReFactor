@@ -109,7 +109,7 @@ exports.getCircleAndOperator = async (req, res) => {
 // 3. initiate transaction(create transaction id)
 // 4. create transaction for the corresponding user id
 // transactionId, APItransactionId, userId, apiId, amount, operator, date, time, status, paymentType, paymentTransactionId
-// transactionId, transactionType, APIId, number, operator, circle(null), amount, paymentType, paymentTransactionId, APITransactionId(null), userId, status 
+// transactionId, transactionType, APIId, number, operator, circle(null), amount, paymentType, paymentTransactionId, apiTransactionId(null), userId, status 
 
 // success response
 

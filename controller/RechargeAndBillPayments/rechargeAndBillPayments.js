@@ -47,14 +47,14 @@ console.log("req.body--------------------------------->>", req.body)
                 // paymentTransaction = await paymentTransactionModel.findOne({
                 //     where: {
                 //         id: paymentTransactionId,
-                //         UserId: userId
+                //         userId: userId
                 //     }
                 // })
 
                 console.log("paymentTransaction--", paymentTransactionId,userId);
                 paymentTransaction = await paymentModel.findOne({
                     where: {
-                        gatewayTransactionId: paymentTransactionId,
+                        id: paymentTransactionId,
                         userId: userId
                     }
                 })
@@ -156,7 +156,7 @@ console.log("req.body--------------------------------->>", req.body)
                         subCategoryId,
                         operator,
                         circle,
-                        WalletPaymentTransactionId: walletTransactionId
+                        walletPaymentTransactionId: walletTransactionId
 
 
                     })
@@ -178,7 +178,7 @@ console.log("req.body--------------------------------->>", req.body)
                     subCategoryId,
                     operator,
                     circle,
-                    WalletPaymentTransactionId: walletTransactionId
+                    walletPaymentTransactionId: walletTransactionId
 
 
                 })

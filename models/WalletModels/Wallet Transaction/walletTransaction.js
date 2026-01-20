@@ -3,7 +3,9 @@ const sequelize = require('../../../util/db_connect');
 const Wallet = require('../WalletSchema/wallet');
 const subCategoryModel = require('../../SubCategoryModel/subCategory');
 const PaymentTransactionModel = require('../../PaymentTransactionModel/paymentTransaction');
+const PaymentModel = require('../../PaymentModel/payment');
 const refundTransactionModel = require('../../RefundTransactionModel/refundTransaction');
+const RechargeTransactionModel = require('../../RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
 
 const WalletTransaction = sequelize.define('WalletTransaction', {
   id: {
@@ -43,7 +45,13 @@ const WalletTransaction = sequelize.define('WalletTransaction', {
   },
   transactionId: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: true,
+    references: {
+      model: RechargeTransactionModel,
+      key: 'id'
+    },
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
   },
   rechargeTypeId: {
     type: DataTypes.STRING,
@@ -58,13 +66,13 @@ const WalletTransaction = sequelize.define('WalletTransaction', {
   paymentTransactionId: {
     type: DataTypes.STRING,
     allowNull: true,
-    // unique: 'unique_WalletTransaction_paymentTransactionId',
-    // references: {
-    //   model: PaymentTransactionModel,
-    //   key: 'id'
-    // },
-    // onDelete: 'SET NULL',
-    // onUpdate: 'CASCADE'
+    unique: 'unique_WalletTransaction_paymentTransactionId',
+    references: {
+      model: PaymentModel,
+      key: 'id'
+    },
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
   },
   status: {
     type: DataTypes.ENUM('pending', 'success', 'failed'),
@@ -83,15 +91,6 @@ const WalletTransaction = sequelize.define('WalletTransaction', {
   }
 });
 
-Wallet.hasMany(WalletTransaction, { foreignKey: 'walletId' });
-WalletTransaction.belongsTo(Wallet, { foreignKey: 'walletId' });
-subCategoryModel.hasMany(WalletTransaction, { foreignKey: 'rechargeTypeId' });
-WalletTransaction.belongsTo(subCategoryModel, { foreignKey: 'rechargeTypeId' });
-PaymentTransactionModel.hasMany(WalletTransaction, {
-  foreignKey: 'paymentTransactionId'
-});
-WalletTransaction.belongsTo(PaymentTransactionModel, {
-  foreignKey: 'paymentTransactionId'
-});
+
 
 module.exports = WalletTransaction;

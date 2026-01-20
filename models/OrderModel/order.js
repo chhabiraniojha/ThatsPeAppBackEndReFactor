@@ -11,12 +11,12 @@ const Order = sequelize.define('Order', {
 
   userId: {
     type: DataTypes.STRING,
-    allowNull: true,
+    allowNull: false,
     references: {
       model: User,
       key: 'id'
     },
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
     onUpdate: 'CASCADE'
   },
 
@@ -33,19 +33,20 @@ const Order = sequelize.define('Order', {
 
   serviceRef: {
     type: DataTypes.STRING(50),
-    allowNull: true // mobile number / account
+    allowNull: false // mobile number / account
   },
   operatorType: {
     type: DataTypes.STRING(50),
-    allowNull: true // type of operator -- dth / prepaid / postpaid
+    allowNull: false // type of operator -- dth / prepaid / postpaid
   },
     operator: {
     type: DataTypes.STRING,
-    allowNull: true,
+    allowNull: false,
   },
   circle: {
     type: DataTypes.STRING,
-    allowNull: true,
+    allowNull: false,
+    defaultValue: '9999' // default circle code for unknown
   },
 
   amount: {
@@ -56,7 +57,7 @@ const Order = sequelize.define('Order', {
   status: {
     type: DataTypes.ENUM('CREATED', 'PROCESSING', 'PENDING', 'SUCCESS', 'FAILED'),
     allowNull: false,
-    defaultValue: 'CREATED'
+  
   }
 });
 

@@ -71,7 +71,7 @@ exports.getUserFullDetails = async (req, res) => {
 
     let lastActivity = await transactionModel.findOne({
       attributes: ['createdAt'],
-      where: { UserId: userId },
+      where: { userId: userId },
       order: [['createdAt', 'DESC']]
     });
     if (!(lastActivity && lastActivity.createdAt)) {
@@ -83,7 +83,7 @@ exports.getUserFullDetails = async (req, res) => {
     }
     lastActivity = lastActivity.createdAt;
     let totalData = await transactionModel.findAll({
-      where: { UserId: userId },
+      where: { userId: userId },
       attributes: [[transactionModel.sequelize.fn('SUM', transactionModel.sequelize.col('Amount')), 'totalAmount']],
       raw: true
     });
@@ -92,7 +92,7 @@ exports.getUserFullDetails = async (req, res) => {
 
     const firstTransaction = await transactionModel.findOne({
       attributes: ['createdAt'],
-      where: { UserId: userId },
+      where: { userId: userId },
       order: [['createdAt', 'ASC']],
       raw: true
     });
@@ -142,7 +142,7 @@ exports.getLastFiveTransactions = async (req, res) => {
     }
 
     const lastFiveTransactions = await transactionModel.findAll({
-      where: { UserId: userId },
+      where: { userId: userId },
       order: [["createdAt", "DESC"]],
       limit: 5,
       raw: true,

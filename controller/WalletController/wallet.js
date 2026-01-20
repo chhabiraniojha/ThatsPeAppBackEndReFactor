@@ -212,7 +212,7 @@ exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
     // console.log(startingBalance);
     const paymentTransaction = await paymentModel.findOne({
       where: {
-        gatewayTransactionId: paymentTransactionId,
+        id: paymentTransactionId,
         userId: userId
       }
     });
@@ -422,17 +422,17 @@ exports.refund = async (req, res) => {
     let amount = 0;
     if (paymentTransactionType == 'cash') {
       const paymentTransactionDetails = await paymentModel.findOne({
-        where: { gatewayTransactionId: transactionDetails.dataValues.cashPaymentTransactionId }
+        where: { id: transactionDetails.dataValues.cashPaymentTransactionId }
       });
       // console.log("paymentTransactionDetails--", paymentTransactionDetails);
       amount = paymentTransactionDetails.dataValues.amount;
       // console.log("amount --", amount);
     } else {
-      const paymentTransactionDetails = await walletTransactionModel.findByPk(transactionDetails.dataValues.WalletPaymentTransactionId);
+      const paymentTransactionDetails = await walletTransactionModel.findByPk(transactionDetails.dataValues.walletPaymentTransactionId);
       amount = paymentTransactionDetails.dataValues.amount;
       // console.log("amount --", amount);
     }
-    const getUserWallet = await walletModel.findOne({ where: { userId: transactionDetails.dataValues.UserId } });
+    const getUserWallet = await walletModel.findOne({ where: { userId: transactionDetails.dataValues.userId } });
     const walletId = getUserWallet.dataValues.id;
     const initiateRefundTransaction = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet-transaction/initiate`, {
       walletId: walletId,
@@ -457,9 +457,10 @@ exports.refund = async (req, res) => {
       // console.log(updateRefundTransaction);
       return res.status(200).json({ message: 'Could not perform refund. Conatct support', success: false, statuscode: 0 });
     }
-    const endingBalance = startingBalance + amount;
+    console.log('Initiate Refund Transaction:', startingBalance, amount);
+    const endingBalance = Number(startingBalance) + Number(amount);
 
-    // console.log(endingBalance);
+    console.log('Ending Balance:', endingBalance);
 
     await getUserWallet.update({
       amount: endingBalance

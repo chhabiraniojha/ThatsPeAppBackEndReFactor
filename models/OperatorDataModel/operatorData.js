@@ -62,7 +62,4 @@ const OperatorData = sequelize.define('OperatorData', {
   }
 });
 
-Subcategory.hasMany(OperatorData, { foreignKey: 'subcategory_id' });
-OperatorData.belongsTo(Subcategory, { foreignKey: 'subcategory_id' });
-
 module.exports = OperatorData;

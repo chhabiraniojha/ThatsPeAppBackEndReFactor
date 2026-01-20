@@ -3,6 +3,7 @@ const sequelize = require('../../util/db_connect');
 const WalletTransaction = require('../WalletModels/Wallet Transaction/walletTransaction');
 const AllTransactions = require('../RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
 
+
 const RefundTransaction = sequelize.define('RefundTransaction', {
   id: {
     type: DataTypes.STRING,

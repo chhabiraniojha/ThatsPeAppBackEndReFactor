@@ -3,6 +3,7 @@ const sequelize = require('../../util/db_connect');
 const Order = require('../OrderModel/order');
 const User = require('../UserModels/UserSchema/user');
 const WalletOrder = require('../OrderModel/walletOrder');
+const PaymentGateway = require('../PayentGatway/paymentGatway');
 
 const Payment = sequelize.define('Payment', {
   id: {
@@ -17,6 +18,7 @@ const Payment = sequelize.define('Payment', {
       model: Order, // refers to orders table
       key: 'id'
     },
+    unique: 'Payment_orderId_unique',
     onDelete: 'SET NULL',
     onUpdate: 'CASCADE'
   },
@@ -27,17 +29,18 @@ const Payment = sequelize.define('Payment', {
       model: WalletOrder, // refers to orders table
       key: 'id'
     },
+    unique: 'Payment_walletOrderId_unique',
     onDelete: 'SET NULL',
     onUpdate: 'CASCADE'
   },
   userId: {
     type: DataTypes.STRING,
-    allowNull: true,
+    allowNull: false,
     references: {
       model: User,
       key: 'id'
     },
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
     onUpdate: 'CASCADE'
   },
 
@@ -46,6 +49,16 @@ const Payment = sequelize.define('Payment', {
     allowNull: false,
     defaultValue: 'VEGAH'
   },
+  gatewayId: {
+    type: DataTypes.STRING(50),
+    allowNull: false, 
+    references: {
+      model: PaymentGateway,
+      key: 'id'
+    },
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  },
 
   paymentMode: {
     type: DataTypes.ENUM('UPI'),
@@ -53,8 +66,7 @@ const Payment = sequelize.define('Payment', {
   },
 
   gatewayTransactionId: {
-    type: DataTypes.STRING(50),
-    unique: true,
+    type: DataTypes.STRING(50),    
     allowNull: true
   },
 
@@ -91,6 +103,21 @@ const Payment = sequelize.define('Payment', {
     type: DataTypes.JSON,
     allowNull: true
   }
-});
+  
+},
+{
+    tableName: 'payments',
+    timestamps: true,
+
+    indexes: [
+      {
+        name: 'uniq_gateway_txn',
+        unique: true,
+        fields: ['gatewayId', 'gatewayTransactionId']
+      }
+    ]
+  }
+
+);
 
 module.exports = Payment;

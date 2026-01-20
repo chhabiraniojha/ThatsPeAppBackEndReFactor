@@ -1,17 +1,18 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../util/db_connect");
 const AvailableAPIs = require("../APIModels/api");
+const User = require("../UserModels/UserSchema/user");
 
 const RechargeAndBillPayTransaction = sequelize.define("AllTransactions", {
-  Id: {
+  id: {
     type: DataTypes.STRING,
     primaryKey: true,
   },
-  APITransactionId: {
+  apiTransactionId: {
     type: DataTypes.STRING,
     allowNull: true,
     references: {
-      model: "AvailableAPIs",  
+      model: AvailableAPIs,  
       key: "id",
     },
     onDelete: "SET NULL",
@@ -51,7 +52,7 @@ const RechargeAndBillPayTransaction = sequelize.define("AllTransactions", {
     allowNull: true,
     unique: 'RechargeAndBillPayTransaction_cashPaymentTransactionId_unique',
   },
-  WalletPaymentTransactionId: {
+  walletPaymentTransactionId: {
     type: DataTypes.STRING,
     allowNull: true,
     unique: 'RechargeAndBillPayTransaction_WalletPaymentTransactionId_unique',
@@ -71,16 +72,26 @@ const RechargeAndBillPayTransaction = sequelize.define("AllTransactions", {
   },
   userId: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      references: {
+          model: User,
+          key: 'id' 
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
 
   },
-  availableAPIId: {
-      type: DataTypes.STRING,
-      allowNull: true
-  },
+ 
   subCategoryId: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true,
+      references: { 
+          model: 'SubCategories',
+          key: 'id' 
+      },
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE'
+
   }
 });
 

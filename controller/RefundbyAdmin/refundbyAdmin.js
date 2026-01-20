@@ -3,7 +3,7 @@ const availableAPIIdModel = require("../../models/APIModels/api");
 const axios = require("axios");
 exports.intialManualRefundByAdmin = async (req, res) => {
   const { transactionId } = req.query;
-  let APITransactionId;
+  let apiTransactionId;
   let transactionStatus;
   let providerTransactionStatus;
   let refundStatus;
@@ -18,11 +18,11 @@ exports.intialManualRefundByAdmin = async (req, res) => {
         statuscode: 0,
       });
     }
-    APITransactionId = transactionData.APITransactionId;
+    apiTransactionId = transactionData.apiTransactionId;
     transactionStatus = transactionData.status;
     refundStatus = transactionData.refundStatus;
 
-    const providerData = await availableAPIIdModel.findByPk(APITransactionId);
+    const providerData = await availableAPIIdModel.findByPk(apiTransactionId);
 
     if (!providerData) {
       return res.status(200).json({

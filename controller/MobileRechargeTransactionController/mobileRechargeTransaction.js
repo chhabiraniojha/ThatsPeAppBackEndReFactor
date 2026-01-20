@@ -6,7 +6,7 @@ let uid = require('../../util/uidGenerator')
 
 
 exports.initiateRecharge = async (req, res) => {
-    const { circleCode, operatorCode, customerNo, amount, userId, cashPaymentTransactionId, paymentTransactionType, status, subCategoryId, operator, circle, WalletPaymentTransactionId, discountedAmount } = req.body
+    const { circleCode, operatorCode, customerNo, amount, userId, cashPaymentTransactionId, paymentTransactionType, status, subCategoryId, operator, circle, walletPaymentTransactionId, discountedAmount } = req.body
     // console.log("Request Body for initiateRecharge transcation:", req.body)
 
     try {
@@ -15,14 +15,14 @@ exports.initiateRecharge = async (req, res) => {
         if (user == null) {
             res.status(201).json({ message: "User not found", success: false })
         } else {
-            const Id = await uid()
+            const id = await uid()
             const apiId = null
             const apiTransactionId = null
             try {
                 if ((status == 'pending' || status == 'success' || status == 'failed') && (paymentTransactionType == 'cash' || paymentTransactionType == 'wallet')) {
                      console.log("Request Body for initiateRecharge transcation:", req.body)
 
-                    const rechargeTransaction = await rechargeAndBillPaymentTransationModel.create({ Id, userId: '8nSF489CFLAmqvyoem9dsq', apiId, amount, discountedAmount, operator, circle, customerNo, status, cashPaymentTransactionId, WalletPaymentTransactionId, paymentTransactionType, apiTransactionId, subCategoryId:'JxQmQdtoe3BVwAwDXbiGCR', circleCode, operatorCode })
+                    const rechargeTransaction = await rechargeAndBillPaymentTransationModel.create({ id, userId: '8nSF489CFLAmqvyoem9dsq', apiId, amount, discountedAmount, operator, circle, customerNo, status, cashPaymentTransactionId, walletPaymentTransactionId, paymentTransactionType, apiTransactionId, subCategoryId:'JxQmQdtoe3BVwAwDXbiGCR', circleCode, operatorCode })
                     res.status(200).json({ message: "Transaction intiated sucessfully ", success: true, statuscode: 1, rechargeTransaction })
                 } else {
                     res.status(200).json({ message: "Invalid data", success: false, statuscode: 0 })
@@ -47,23 +47,23 @@ exports.updateTransactionStatus = async (req, res) => {
             return res.status(200).json({ message: "Invalid API ID", success: false });
         }
         
-        const rechargeTransaction = await rechargeAndBillPaymentTransationModel.findOne({ where: { Id: rechargeTransactionId } })
+        const rechargeTransaction = await rechargeAndBillPaymentTransationModel.findOne({ where: { id: rechargeTransactionId } })
         if (rechargeTransaction == null) {
             res.status(201).json({ message: "No transaction found", success: false })
         } else {
             if (apiResponse == "FAILURE") {     
                 console.log("Recharge failed due to some error-----------------------");
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'failed', APITransactionId: apiData?.dataValues?.id })
+                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'failed', apiTransactionId: apiData?.dataValues?.id })
                 res.status(202).json({ message: "Recharge failed due to some error", success: false, rechargeTransactionUpdate })
             } 
             if(apiResponse == "PENDING") {
                 console.log("Recharge is pending-----------------------");
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'pending', APITransactionId: apiData?.dataValues?.id })
+                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'pending', apiTransactionId: apiData?.dataValues?.id })
                 res.status(200).json({ message: "Recharge Pending", success: false, rechargeTransactionUpdate })
             }
              if(apiResponse == "SUCCESS") {
                 console.log("Recharge successful-----------------------");  
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'success', APITransactionId: apiData?.dataValues?.id })
+                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'success', apiTransactionId: apiData?.dataValues?.id })
                 res.status(200).json({ message: "Recharge successful", success: true, rechargeTransactionUpdate })
             }
         }

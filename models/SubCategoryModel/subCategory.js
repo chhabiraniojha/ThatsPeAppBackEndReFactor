@@ -43,7 +43,6 @@ const Subcategory = sequelize.define('SubCategory', {
   }
 });
 
-Category.hasMany(Subcategory, { foreignKey: 'categoryId' });
-Subcategory.belongsTo(Category, { foreignKey: 'categoryId' });
+
 
 module.exports = Subcategory;

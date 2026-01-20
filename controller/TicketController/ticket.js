@@ -56,7 +56,7 @@ exports.createTicket = async (req, res) => {
     }
     console.log(executive.data.executive, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 
-    const ticketSubCategory = transactionDetails.dataValues.SubCategoryId;
+    const ticketSubCategory = transactionDetails.dataValues.subCategoryId;
     let adminId = executive.data.executive[0].AdminId;
 
     const id = await idgenerator();

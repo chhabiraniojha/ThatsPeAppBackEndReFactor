@@ -7,7 +7,7 @@ try {
     if(user.mobileNo=='9938300585'){
         return res.status(200).json({ success: false, message: "user allowed to add ammount to wallet ",statuscode:0 });
     }
-    const checkTranscation = await AlltranscationModel.findOne({ where: { UserId: user.id } });
+    const checkTranscation = await AlltranscationModel.findOne({ where: { userId: user.id } });
     console.log("checkTranscation---",checkTranscation);
     if(checkTranscation==null){
         return res.status(200).json({ success: false, message: "User not allowed to add ammount to wallet , no transcation found ",statuscode:0 });

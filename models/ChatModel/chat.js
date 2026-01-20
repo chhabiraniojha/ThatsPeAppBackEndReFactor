@@ -1,41 +1,48 @@
-const { DataTypes } = require('sequelize')
-const sequelize = require('../../util/db_connect')
-const Ticket = require('../../models/TicketModel/ticket')
+const { DataTypes } = require('sequelize');
+const sequelize = require('../../util/db_connect');
+const User = require('../UserModels/UserSchema/user');
+ 
+const Ticket = require('../../models/TicketModel/ticket');
 
 const Chat = sequelize.define('Chat', {
-    id: {
-        type: DataTypes.STRING,
-        primaryKey: true
-    }, 
-    message: {
-        type: DataTypes.STRING,
-        allowNull: false
+  id: {
+    type: DataTypes.STRING,
+    primaryKey: true
+  },
+  message: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  messageType: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  ticketId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: Ticket,
+      key: 'id'
     },
-    messageType: {
-        type: DataTypes.STRING,
-        allowNull: false
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  },
+  userId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: User,
+      key: 'id'
     },
-    ticketId: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        references: {
-            model: Ticket,
-            key: 'id'
-        },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
-    },
-    userId: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    adminId: {
-        type: DataTypes.STRING,
-        allowNull: true
-    }
-})
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  },
+  adminId: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
+});
 
-Ticket.hasMany(Chat, { foreignKey: 'ticketId' });
-Chat.belongsTo(Ticket, { foreignKey: 'ticketId' });
 
-module.exports = Chat
+
+module.exports = Chat;

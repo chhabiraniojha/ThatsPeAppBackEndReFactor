@@ -132,7 +132,7 @@ const newPayment = async (req, res) => {
             id: paymentTransactionId,
             transactionAmount: purpose == 'recharge' ? finalAmount : amount,
             transactionFor,
-            UserId: user.id
+            userId: user.id
         });
         // paymentInitiateLog Create 
         try {

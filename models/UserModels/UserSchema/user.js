@@ -28,7 +28,7 @@ const User = sequelize.define('User', {
     },
     effective_from: {
         type: DataTypes.DATE,
-        allowNull: false,
+        allowNull: true,
         defaultValue: DataTypes.NOW
     },
 

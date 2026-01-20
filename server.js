@@ -19,6 +19,7 @@ const Category = require('./models/CategoryModel/category')
 const Order = require('./models/OrderModel/order')
 const WalletOrder = require('./models/OrderModel/walletOrder')
 const Payment=require('./models/PaymentModel/payment')
+const PaymentGateway=require('./models/PayentGatway/paymentGatway') 
 // Models extraction ends here
 const bodyParser = require('body-parser')
 const userRoutes = require('./routes/userRoutes/userRouter')
@@ -59,33 +60,33 @@ const { initializeSocket } = require('./util/socket');
 // foreign key association starts here
 // -----------------------------------------
 // relationship between user and payment transaction table
-User.hasMany(PaymentTransaction)
-PaymentTransaction.belongsTo(User)
+// User.hasMany(PaymentTransaction)
+// PaymentTransaction.belongsTo(User)
 
 
 // relationship between user and rechargAndBillPaymentTransactions table
-User.hasMany(rechargAndBillPaymentTransactions)
-rechargAndBillPaymentTransactions.belongsTo(User)
+// User.hasMany(rechargAndBillPaymentTransactions)
+// rechargAndBillPaymentTransactions.belongsTo(User)
 
 
 // relationship between Api table and rechargAndBillPaymentTransactions table
-Api.hasMany(rechargAndBillPaymentTransactions)
-rechargAndBillPaymentTransactions.belongsTo(Api)
+// Api.hasMany(rechargAndBillPaymentTransactions)
+// rechargAndBillPaymentTransactions.belongsTo(Api)
 
 
 // relationship between SubCategory table and rechargAndBillPaymentTransactions table
-SubCategory.hasMany(rechargAndBillPaymentTransactions)
-rechargAndBillPaymentTransactions.belongsTo(SubCategory)
+// SubCategory.hasMany(rechargAndBillPaymentTransactions)
+// rechargAndBillPaymentTransactions.belongsTo(SubCategory)
 
-WalletTransaction.hasMany(RefundTransaction, { foreignKey: 'walletTransactionId' })
-RefundTransaction.belongsTo(WalletTransaction, { foreignKey: 'walletTransactionId' })
+// WalletTransaction.hasMany(RefundTransaction, { foreignKey: 'walletTransactionId' })
+// RefundTransaction.belongsTo(WalletTransaction, { foreignKey: 'walletTransactionId' })
 
-rechargAndBillPaymentTransactions.hasMany(RefundTransaction, { foreignKey: 'allTransactionId' })
-RefundTransaction.belongsTo(rechargAndBillPaymentTransactions, { foreignKey: 'allTransactionId' })
+// rechargAndBillPaymentTransactions.hasMany(RefundTransaction, { foreignKey: 'allTransactionId' })
+// RefundTransaction.belongsTo(rechargAndBillPaymentTransactions, { foreignKey: 'allTransactionId' })
 
 
-Category.hasMany(SubCategory, { foreignKey: 'categoryId' })
-SubCategory.belongsTo(Category, { foreignKey: 'categoryId' })
+// Category.hasMany(SubCategory, { foreignKey: 'categoryId' })
+// SubCategory.belongsTo(Category, { foreignKey: 'categoryId' })
 // -------------------------------------------
 // foreign key association ends here
 syncDB()

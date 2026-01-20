@@ -15,22 +15,22 @@ const WalletOrder = sequelize.define('WalletOrder', {
   },
   walletId: {
     type: DataTypes.STRING,
-    allowNull: true,
+    allowNull: false,
     references: {
       model: Wallet,
       key: 'id'
     },
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
     onUpdate: 'CASCADE'
   },
   userId: {
     type: DataTypes.STRING,
-    allowNull: true,
+    allowNull: false,
     references: {
       model: User,
       key: 'id' 
     },
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
     onUpdate: 'CASCADE'
   },
 
@@ -39,16 +39,7 @@ const WalletOrder = sequelize.define('WalletOrder', {
     allowNull: false
   },
 
-  walletAmountBefore: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
-  },
-
-  walletAmountAfter: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
-  },
-
+ 
   status: {
     type: DataTypes.ENUM('CREATED', 'PROCESSING', 'SUCCESS', 'FAILED'),
     allowNull: false,

@@ -381,7 +381,7 @@ exports.vegaahCallback = async (req, res) => {
         dataForWalletAdd = {
           userId: orderUserId,
           amount: orderAmount,
-          transactionId: transactionId
+          transactionId: paymentId
         };
       } else if (purpose == 'recharge') {
         apiDataForRecharge = {
@@ -389,7 +389,7 @@ exports.vegaahCallback = async (req, res) => {
           ezytm_operator_code: orderOperator,
           customer_number: orderServiceRef,
           amount: orderAmount,
-          paymentTransactionId: transactionId,
+          paymentTransactionId: paymentId,
           subCategoryId: orderServiceType,
           transactionType: 'cash',
           status: 'pending',
@@ -404,17 +404,17 @@ exports.vegaahCallback = async (req, res) => {
 
       //recharge api call simulation
       if (purpose == 'recharge') {
-        // const rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`, apiDataForRecharge);
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        let rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+        const rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`, apiDataForRecharge);
+        // await new Promise((resolve) => setTimeout(resolve, 3000));
+        // let rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
 
         // console.log('recharge response-----------xxx', rechargeResponse);
 
-        console.log('recharge response-----------xxx', rechargeResult);
+        // console.log('recharge response-----------xxx', rechargeResult);
         await orderRecord.update(
           {
-            status: rechargeResult == 1 ? 'SUCCESS' : rechargeResult == 0 ? 'FAILED' : 'PENDING'
-            // status: rechargeResponse?.data?.statuscode == 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode == 0 ? 'FAILED' : 'PENDING'
+            // status: rechargeResult == 1 ? 'SUCCESS' : rechargeResult == 0 ? 'FAILED' : 'PENDING'
+            status: rechargeResponse?.data?.statuscode == 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode == 0 ? 'FAILED' : 'PENDING'
           },
           { where: { id: orderId } }
         );

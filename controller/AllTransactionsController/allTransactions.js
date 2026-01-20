@@ -15,7 +15,7 @@ function buildWhereCondition(startingDate, endingDate, subcategoryId, userId, pa
   let whereCondition = {};
 
   if (userId) {
-    whereCondition.UserId = userId;
+    whereCondition.userId = userId;
   }
   if (startingDate && endingDate) {
     whereCondition.createdAt = {
@@ -33,11 +33,11 @@ function buildWhereCondition(startingDate, endingDate, subcategoryId, userId, pa
     }
 
     if (Array.isArray(subcategoryId) && subcategoryId.length > 0) {
-      whereCondition.SubCategoryId = {
+      whereCondition.subCategoryId = {
         [Op.in]: subcategoryId
       };
     } else if (subcategoryId) {
-      whereCondition.SubCategoryId = subcategoryId;
+      whereCondition.subCategoryId = subcategoryId;
     }
   }
 
@@ -141,7 +141,7 @@ exports.getSpexificTransaction = async (req, res) => {
       });
     }
     userDetails = await userModel.findOne({
-      where: { id: transactionDetails.UserId }
+      where: { id: transactionDetails.userId }
     });
     if (userDetails) {
       userObject = {
@@ -164,7 +164,7 @@ exports.getSpexificTransaction = async (req, res) => {
     if (transactionDetails.paymentTransactionType === 'wallet') {
       walletTransactionDetails = await walletTransactionModel.findOne({
         where: {
-          id: transactionDetails.WalletPaymentTransactionId
+          id: transactionDetails.walletPaymentTransactionId
         }
       });
     } else if (transactionDetails.paymentTransactionType === 'cash') {
@@ -174,8 +174,8 @@ exports.getSpexificTransaction = async (req, res) => {
         }
       });
     }
-    rechargeApiDetails = await availableAPIIdModel.findByPk(transactionDetails.APITransactionId);
-    rechargeType = await subCategoryModel.findByPk(transactionDetails.SubCategoryId, { attributes: ['name'] });
+    rechargeApiDetails = await availableAPIIdModel.findByPk(transactionDetails.apiTransactionId);
+    rechargeType = await subCategoryModel.findByPk(transactionDetails.subCategoryId, { attributes: ['name'] });
 
     transactionDetails.dataValues.rechargeApiName = rechargeApiDetails ? rechargeApiDetails.name : null;
     transactionDetails.dataValues.rechargeTypeName = rechargeType ? rechargeType.name : null;
