@@ -5,6 +5,9 @@ const paymentTransactionModel = require('../../models/PaymentTransactionModel/pa
 const walletTransactionModel = require('../../models/WalletModels/Wallet Transaction/walletTransaction')
 const paymentModel = require('../../models/PaymentModel/payment')
 const walletController = require('../../controller/WalletController/wallet')
+const  a1RechargeService  = require('../../services/recharge/a1Recharge')
+const rechargeExchangeService = require('../../services/recharge/rechargeExchangeRecharge')
+const roboticsRechargeService = require('../../services/recharge/roboticsRecharge')
 
 
 exports.rchargeAndBillPayments = async (req, res) => {
@@ -184,7 +187,7 @@ console.log("req.body--------------------------------->>", req.body)
                 })
             }
 
-  console.log("Cash Payment Initiate Transaction END -----xxxx---->")  
+//   console.log("Cash Payment Initiate Transaction END -----xxxx---->")  
 
             // console.log(initiateTransaction);
 
@@ -206,6 +209,16 @@ console.log("req.body--------------------------------->>", req.body)
                     //     RechargeMode: '1'
                     // };
                     // const rechargeResponse = await axios.get('https://cyrusrecharge.in/services_cyapi/recharge_cyapi.aspx', { params })
+                    if (transactionType == "cash") {
+                        await paymentTransaction.update({
+                            isUsed: 1
+                        })
+                    }
+                    if (transactionType == "wallet") {
+                        await walletTransaction.update({
+                            isUsed: 1
+                        })
+                    }
                     // --- Robotics  recharge api  ----
                     const roboticsParams = {
                         Apimember_id: process.env.ROBOTICS_USERNAME,
@@ -218,20 +231,13 @@ console.log("req.body--------------------------------->>", req.body)
 
 
                     };
-                    const roboticReachargeResponse = await axios.get('https://api.roboticexchange.in/Robotics/webservice/GetMobileRecharge', { params: roboticsParams })
+                    // const roboticReachargeResponse = await axios.get('https://api.roboticexchange.in/Robotics/webservice/GetMobileRecharge', { params: roboticsParams })
+                    const roboticReachargeResponse = await roboticsRechargeService.roboticReacharge(roboticsParams)
+
                     // console.log(roboticReachargeResponse)
                     // RoboticReachargeResponse is Pending
                     if (roboticReachargeResponse.data.STATUS == 2) {
-                        if (transactionType == "cash") {
-                            await paymentTransaction.update({
-                                isUsed: 1
-                            })
-                        }
-                        if (transactionType == "wallet") {
-                            await walletTransaction.update({
-                                isUsed: 1
-                            })
-                        }
+                    
                         const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                             rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
                             apiResponse: "PENDING",
@@ -250,25 +256,16 @@ console.log("req.body--------------------------------->>", req.body)
                         })
 
                         // console.log(updateTransationStatus)
-                        if (transactionType == "cash") {
-                            await paymentTransaction.update({
-                                isUsed: 1
-                            })
-                        }
-                        if (transactionType == "wallet") {
-                            await walletTransaction.update({
-                                isUsed: 1
-                            })
-                        }
+                        
 
 
                         return res.status(200).json({ message: "Transation Sucessfull", success: true, statuscode: 1, rechargeDate: initiateTransaction.data.rechargeTransaction.updatedAt })
 
 
-                    }
-                  
+                    }                 
+                    // RoboticReachargeResponse is Failled            
                  
-                    if (roboticReachargeResponse.data.STATUS == 3) {
+                    if (roboticReachargeResponse.data.STATUS == 3 || roboticReachargeResponse.STATUS==3)  {
                         // ---  Recharge Exchange  recharge api  ----
                         const rechargeExchangeParams = {
                             userid: process.env.RECHARGEEXCHANGE_USERNAME,
@@ -279,19 +276,11 @@ console.log("req.body--------------------------------->>", req.body)
                             transid: initiateTransaction.data.rechargeTransaction.Id
                         }
 
-                        const rechargeExchangeResponse = await axios.get('https://api.RechargeExchange.com/API.asmx/Transaction', { params: rechargeExchangeParams })
+                        // const rechargeExchangeResponse = await axios.get('https://api.RechargeExchange.com/API.asmx/Transaction', { params: rechargeExchangeParams })
+                        const rechargeExchangeResponse = await  rechargeExchangeService.rechargeExchange(rechargeExchangeParams)
                         // console.log(rechargeExchangeResponse)
                         if (rechargeExchangeResponse.data.status == "PENDING"){
-                              if (transactionType == "cash") {
-                                    await paymentTransaction.update({
-                                        isUsed: 1
-                                    })
-                                }
-                                if (transactionType == "wallet") {
-                                    await walletTransaction.update({
-                                        isUsed: 1
-                                    })
-                                }
+                             
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                                     rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
                                     apiResponse: "PENDING",
@@ -309,22 +298,13 @@ console.log("req.body--------------------------------->>", req.body)
                             })
 
                             // console.log(updateTransationStatus)
-                            if (transactionType == "cash") {
-                                await paymentTransaction.update({
-                                    isUsed: 1
-                                })
-                            }
-                            if (transactionType == "wallet") {
-                                await walletTransaction.update({
-                                    isUsed: 1
-                                })
-                            }
+                           
 
 
                             return res.status(200).json({ message: "Transation Sucessfull", success: true, statuscode: 1, rechargeDate: initiateTransaction.data.rechargeTransaction.updatedAt })
 
                         }
-                        if (rechargeExchangeResponse.data.status == "FAIL") {
+                        if (rechargeExchangeResponse.data.status == "FAIL" || rechargeExchangeResponse.status == "FAIL") {
 
 
 
@@ -342,12 +322,13 @@ console.log("req.body--------------------------------->>", req.body)
 
                             };
 
-                            const rechargeResponse = await axios.get('https://business.a1topup.com/recharge/api', { params })
+                            // const rechargeResponse = await axios.get('https://business.a1topup.com/recharge/api', { params })
+                            const rechargeResponse = await a1RechargeService.rechargeExchange(params)
                             // console.log(rechargeResponse.data)
 
 
                             //   Recharge failled Logic 
-                            if (rechargeResponse.data.Status === "Failure" || rechargeResponse.data.status === "Failure") {
+                            if (rechargeResponse.data.Status === "Failure" || rechargeResponse.data.status === "Failure" || rechargeResponse.Status === "FAILURE" || rechargeResponse.data.status === "FAILURE") {
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                                     rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
                                     apiResponse: "FAILURE",
@@ -361,16 +342,7 @@ console.log("req.body--------------------------------->>", req.body)
                                     allTransactionId: initiateTransaction.data.rechargeTransaction.Id
                                 })
                                 // console.log("refdundData", refdundData);
-                                if (transactionType == "cash") {
-                                    await paymentTransaction.update({
-                                        isUsed: 1
-                                    })
-                                }
-                                if (transactionType == "wallet") {
-                                    await walletTransaction.update({
-                                        isUsed: 1
-                                    })
-                                }
+                         
 
 
                                 return res.status(200).json({ message: "Transation Failled", success: false, statuscode: 0, rechargeDate: initiateTransaction.data.rechargeTransaction.updatedAt })
@@ -384,16 +356,7 @@ console.log("req.body--------------------------------->>", req.body)
                                 })
 
                                 // console.log(updateTransationStatus)
-                                if (transactionType == "cash") {
-                                    await paymentTransaction.update({
-                                        isUsed: 1
-                                    })
-                                }
-                                if (transactionType == "wallet") {
-                                    await walletTransaction.update({
-                                        isUsed: 1
-                                    })
-                                }
+                        
 
 
                                 return res.status(200).json({ message: "Transation Sucessfull", success: true, statuscode: 1, rechargeDate: initiateTransaction.data.rechargeTransaction.updatedAt })
@@ -401,16 +364,7 @@ console.log("req.body--------------------------------->>", req.body)
                             }
 
                             else {
-                                if (transactionType == "cash") {
-                                    await paymentTransaction.update({
-                                        isUsed: 1
-                                    })
-                                }
-                                if (transactionType == "wallet") {
-                                    await walletTransaction.update({
-                                        isUsed: 1
-                                    })
-                                }
+                              
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                                     rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
                                     apiResponse: "PENDING",

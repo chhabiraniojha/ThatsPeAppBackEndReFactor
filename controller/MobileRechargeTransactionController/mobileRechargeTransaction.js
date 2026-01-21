@@ -22,7 +22,7 @@ exports.initiateRecharge = async (req, res) => {
                 if ((status == 'pending' || status == 'success' || status == 'failed') && (paymentTransactionType == 'cash' || paymentTransactionType == 'wallet')) {
                      console.log("Request Body for initiateRecharge transcation:", req.body)
 
-                    const rechargeTransaction = await rechargeAndBillPaymentTransationModel.create({ id, userId: '8nSF489CFLAmqvyoem9dsq', apiId, amount, discountedAmount, operator, circle, customerNo, status, cashPaymentTransactionId, walletPaymentTransactionId, paymentTransactionType, apiTransactionId, subCategoryId:'JxQmQdtoe3BVwAwDXbiGCR', circleCode, operatorCode })
+                    const rechargeTransaction = await rechargeAndBillPaymentTransationModel.create({ id, userId, apiId, amount, discountedAmount, operator, circle, customerNo, status, cashPaymentTransactionId, walletPaymentTransactionId, paymentTransactionType, apiTransactionId, subCategoryId, circleCode, operatorCode })
                     res.status(200).json({ message: "Transaction intiated sucessfully ", success: true, statuscode: 1, rechargeTransaction })
                 } else {
                     res.status(200).json({ message: "Invalid data", success: false, statuscode: 0 })

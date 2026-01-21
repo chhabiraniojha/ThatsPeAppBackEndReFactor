@@ -53,8 +53,8 @@ exports.payRequest = async (req, res) => {
     const clientIp = requestIp.getClientIp(req);
     const user = req.user;
     const userId = user.id;
-    const paymentTransactionId = await UIDGenerator();
-    const paymentInitiateLogId = await UIDGenerator();
+    // const paymentTransactionId = await UIDGenerator();
+    // const paymentInitiateLogId = await UIDGenerator();
     const { transactionFor } = req.body;
     let finalAmount;
     if (!((purpose && purpose == 'recharge') || purpose == 'addfund')) {
@@ -160,7 +160,7 @@ exports.payRequest = async (req, res) => {
       trackId: purpose == 'recharge' ? orderId : walletOrderId,
       terminalId: process.env.VEGAH_TERMINAL_ID,
       password: process.env.VEGAH_PASSWORD,
-      amount: '01.00',
+      amount: '01.00',  // it  will be change later
       currency: 'INR'
     };
     const secretKey = process.env.VEGAH_SECRET_KEY;
@@ -248,11 +248,14 @@ exports.vegaahCallback = async (req, res) => {
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
     const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
+    if(event!=='Transaction.Success'||responseCode!=='000'||result!=='SUCCESS'){
+      return res.status(200).json({ message: 'Payment Failed', status: 'success' });
+    }
 
     const paymentRecord = await Payment.findOne({
       where: { gatewayTransactionId: transactionId }
     });
-    console.log('PAYMENT RECORD FOUND:', paymentRecord);
+    // console.log('PAYMENT RECORD FOUND:', paymentRecord);
     if (!paymentRecord) {
       console.log('Payment record not found for transactionId:', transactionId);
       return res.status(200).send('PAYMENT RECORD NOT FOUND');
@@ -266,12 +269,20 @@ exports.vegaahCallback = async (req, res) => {
     paymentAmount = paymentRecord.amount;
     responseCodeRecord = paymentRecord.responseCode;
 
+    // importnat it will uncoment later in Production *****
+
+    // if(paymentAmount!=amount){
+    //   // console.log('Amount mismatch for paymentId:', paymentId);
+    //    return res.status(200).json({ message: 'Payment Failed Due To Amount Mismatch', status: 'success' });
+    // }
+
     //check the paymet record status is already success or not to handle multiple callback
 
     if ((paymentStatus === 'SUCCESS' || paymentStatus === 'FAILED') && responseCodeRecord === '000') {
       console.log('Payment already processed:', paymentId);
       return res.status(200).json({ message: 'PAYMENT ALREADY PROCESSED' });
     }
+
 
     //check both order id  is same
     if (paymentOrderId !== orderId) {
@@ -429,6 +440,7 @@ exports.vegaahCallback = async (req, res) => {
           userId: dataForWalletAdd.userId
         });
         console.log('Add Fund Response:', addFundResponse);
+
         await walletOrderRecord.update(
           {
             status: addFundResponse?.statuscode == 1 ? 'SUCCESS' : 'FAILED'
