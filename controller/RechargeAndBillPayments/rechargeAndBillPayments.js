@@ -7,7 +7,7 @@ const paymentModel = require('../../models/PaymentModel/payment')
 const walletController = require('../../controller/WalletController/wallet')
 const  a1RechargeService  = require('../../services/recharge/a1Recharge')
 const rechargeExchangeService = require('../../services/recharge/rechargeExchangeRecharge')
-const roboticsRechargeService = require('../../services/recharge/roboticsRecharge')
+const roboticsRechargeService = require('../../services/recharge/roboticRecharge')
 
 
 exports.rchargeAndBillPayments = async (req, res) => {
