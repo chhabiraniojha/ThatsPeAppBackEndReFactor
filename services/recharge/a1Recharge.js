@@ -3,7 +3,7 @@ const axios = require('axios')
 exports.rechargeExchange = async (params) => {
   try {
     const rechargeResponse = await axios.get('https://business.a1topup.com/recharge/api', { params })
-    return rechargeExchangeResponse;
+    return rechargeResponse
   } catch (error) {
     return {
       success: false,
