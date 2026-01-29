@@ -245,6 +245,8 @@ exports.payRequest = async (req, res) => {
 exports.vegaahCallback = async (req, res) => {
   try {
     // 1️⃣ Read callback payload
+
+    console.log("vegha callbeck req",req)
     const data = req.method === 'POST' ? req.body : req.query;
     console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
     const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
