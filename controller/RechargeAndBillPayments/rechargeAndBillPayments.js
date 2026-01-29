@@ -235,11 +235,11 @@ console.log("req.body--------------------------------->>", req.body)
                     const roboticReachargeResponse = await roboticsRechargeService.roboticReacharge(roboticsParams)
 
                     console.log("Robotic Response -------------------------->>>>>>>>>> ",roboticReachargeResponse)
-                    console.log("Robotic Response data -------------------------->>>>>>>>>> ",roboticReachargeResponse.data)
+                    console.log("Robotic Response datacd  -------------------------->>>>>>>>>> ",roboticReachargeResponse.data)
 
 
                     // RoboticReachargeResponse is Pending
-                    if (roboticReachargeResponse.data.STATUS == 2) {
+                    if (roboticReachargeResponse?.data?.STATUS == 2) {
                     
                         const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                             rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
@@ -251,7 +251,7 @@ console.log("req.body--------------------------------->>", req.body)
 
                     }
                     // RoboticReachargeResponse is Success
-                    if (roboticReachargeResponse.data.STATUS == 1) {
+                    if (roboticReachargeResponse?.data?.STATUS == 1) {
                         const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                             rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
                             apiResponse: "SUCCESS",
@@ -268,7 +268,7 @@ console.log("req.body--------------------------------->>", req.body)
                     }                 
                     // RoboticReachargeResponse is Failled            
                  
-                    if (roboticReachargeResponse.data.STATUS == 3 || roboticReachargeResponse.STATUS==3)  {
+                    if (roboticReachargeResponse?.data?.STATUS == 3 || roboticReachargeResponse?.STATUS==3)  {
                         // ---  Recharge Exchange  recharge api  ----
                         const rechargeExchangeParams = {
                             userid: process.env.RECHARGEEXCHANGE_USERNAME,
@@ -282,7 +282,7 @@ console.log("req.body--------------------------------->>", req.body)
                         // const rechargeExchangeResponse = await axios.get('https://api.RechargeExchange.com/API.asmx/Transaction', { params: rechargeExchangeParams })
                         const rechargeExchangeResponse = await  rechargeExchangeService.rechargeExchange(rechargeExchangeParams)
                         // console.log(rechargeExchangeResponse)
-                        if (rechargeExchangeResponse.data.status == "PENDING"){
+                        if (rechargeExchangeResponse?.data?.status == "PENDING"){
                              
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                                     rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
@@ -293,7 +293,7 @@ console.log("req.body--------------------------------->>", req.body)
                                 return res.status(200).json({ message: "Transation Pending", success: false, statuscode: 2, rechargeDate: initiateTransaction.data.rechargeTransaction.updatedAt })
 
                         }
-                        if (rechargeExchangeResponse.data.status == "SUCCESS") {
+                        if (rechargeExchangeResponse?.data?.status == "SUCCESS") {
                             const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                                 rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
                                 apiResponse: "SUCCESS",
@@ -307,7 +307,7 @@ console.log("req.body--------------------------------->>", req.body)
                             return res.status(200).json({ message: "Transation Sucessfull", success: true, statuscode: 1, rechargeDate: initiateTransaction.data.rechargeTransaction.updatedAt })
 
                         }
-                        if (rechargeExchangeResponse.data.status == "FAIL" || rechargeExchangeResponse.status == "FAIL") {
+                        if (rechargeExchangeResponse?.data?.status == "FAIL" || rechargeExchangeResponse?.status == "FAIL") {
 
 
 
@@ -331,7 +331,7 @@ console.log("req.body--------------------------------->>", req.body)
 
 
                             //   Recharge failled Logic 
-                            if (rechargeResponse.data.Status === "Failure" || rechargeResponse.data.status === "Failure" || rechargeResponse.Status === "FAILURE" || rechargeResponse.data.status === "FAILURE") {
+                            if (rechargeResponse?.data?.Status === "Failure" || rechargeResponse?.data?.status === "Failure" || rechargeResponse?.Status === "FAILURE" || rechargeResponse?.data?.status === "FAILURE") {
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                                     rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
                                     apiResponse: "FAILURE",
@@ -351,7 +351,7 @@ console.log("req.body--------------------------------->>", req.body)
                                 return res.status(200).json({ message: "Transation Failled", success: false, statuscode: 0, rechargeDate: initiateTransaction.data.rechargeTransaction.updatedAt })
                             }
                             //  Recharge Success Logic 
-                            else if (rechargeResponse.data.Status === "Success" || rechargeResponse.data.status === "Success") {
+                            else if (rechargeResponse?.data?.Status === "Success" || rechargeResponse?.data?.status === "Success") {
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
                                     rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
                                     apiResponse: "SUCCESS",
