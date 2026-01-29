@@ -234,7 +234,10 @@ console.log("req.body--------------------------------->>", req.body)
                     // const roboticReachargeResponse = await axios.get('https://api.roboticexchange.in/Robotics/webservice/GetMobileRecharge', { params: roboticsParams })
                     const roboticReachargeResponse = await roboticsRechargeService.roboticReacharge(roboticsParams)
 
-                    // console.log(roboticReachargeResponse)
+                    console.log("Robotic Response -------------------------->>>>>>>>>> ",roboticReachargeResponse)
+                    console.log("Robotic Response data -------------------------->>>>>>>>>> ",roboticReachargeResponse.data)
+
+
                     // RoboticReachargeResponse is Pending
                     if (roboticReachargeResponse.data.STATUS == 2) {
                     
