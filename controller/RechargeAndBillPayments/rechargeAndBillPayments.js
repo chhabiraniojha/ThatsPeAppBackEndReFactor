@@ -226,7 +226,7 @@ console.log("req.body--------------------------------->>", req.body)
                         Mobile_no: customer_number,
                         Operator_code: roboticsExchangeOperatorCode,
                         Amount: amount,
-                        Member_request_txnid: initiateTransaction.data.rechargeTransaction.Id,
+                        Member_request_txnid: initiateTransaction.data.rechargeTransaction.id,
                         Circle: roboticsExchangeCircleCode,
 
 
@@ -276,7 +276,7 @@ console.log("req.body--------------------------------->>", req.body)
                             opcode: rechargeExchangeOperatorCode,
                             number: customer_number,
                             amount: amount,
-                            transid: initiateTransaction.data.rechargeTransaction.Id
+                            transid: initiateTransaction.data.rechargeTransaction.id
                         }
 
                         // const rechargeExchangeResponse = await axios.get('https://api.RechargeExchange.com/API.asmx/Transaction', { params: rechargeExchangeParams })
@@ -320,7 +320,7 @@ console.log("req.body--------------------------------->>", req.body)
                                 operatorcode: a1OperatorCode,
                                 number: customer_number,
                                 amount: amount,
-                                orderid: initiateTransaction.data.rechargeTransaction.Id,
+                                orderid: initiateTransaction.data.rechargeTransaction.id,
                                 format: 'json',
 
                             };
