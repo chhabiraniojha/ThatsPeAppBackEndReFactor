@@ -245,10 +245,10 @@ exports.payRequest = async (req, res) => {
 exports.vegaahCallback = async (req, res) => {
   try {
     // 1️⃣ Read callback payload
-
-    console.log("vegha callbeck req",req)
+    console.log("request query from  veghaa --->",req.query)
+    
     const data = req.method === 'POST' ? req.body : req.query;
-    console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
+    // console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
     const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
     if(event!=='Transaction.Success'||responseCode!=='000'||result!=='SUCCESS'){
       return res.status(200).json({ message: 'Payment Failed', status: 'success' });
@@ -421,7 +421,7 @@ exports.vegaahCallback = async (req, res) => {
         // await new Promise((resolve) => setTimeout(resolve, 3000));
         // let rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
 
-        console.log('recharge response-----------xxx', rechargeResponse);
+        // console.log('recharge response-----------xxx', rechargeResponse);
 
         // console.log('recharge response-----------xxx', rechargeResult);
         await orderRecord.update(

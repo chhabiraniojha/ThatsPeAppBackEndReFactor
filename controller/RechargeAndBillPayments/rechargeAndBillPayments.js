@@ -23,7 +23,7 @@ exports.rchargeAndBillPayments = async (req, res) => {
     let walletTransactionId
     let walletDebitResponse
 
-console.log("req.body--------------------------------->>", req.body)
+// console.log("req.body--------------------------------->>", req.body)
 
 
     try {
@@ -233,9 +233,7 @@ console.log("req.body--------------------------------->>", req.body)
                     };
                     // const roboticReachargeResponse = await axios.get('https://api.roboticexchange.in/Robotics/webservice/GetMobileRecharge', { params: roboticsParams })
                     const roboticReachargeResponse = await roboticsRechargeService.roboticReacharge(roboticsParams)
-
-                    console.log("Robotic Response -------------------------->>>>>>>>>> ",roboticReachargeResponse)
-                    console.log("Robotic Response datacd  -------------------------->>>>>>>>>> ",roboticReachargeResponse.data)
+ 
 
 
                     // RoboticReachargeResponse is Pending
@@ -327,9 +325,7 @@ console.log("req.body--------------------------------->>", req.body)
 
                             // const rechargeResponse = await axios.get('https://business.a1topup.com/recharge/api', { params })
                             const rechargeResponse = await a1RechargeService.a1Recharge(params)
-                            console.log("a1 recharge response  ---->>>> ",rechargeResponse)
-                            console.log("a1 recharge response data   ---->>>> ",rechargeResponse.data)
-
+                            
 
                             //   Recharge failled Logic 
                             if (rechargeResponse?.data?.Status === "Failure" || rechargeResponse?.data?.status === "Failure" || rechargeResponse?.Status === "FAILURE" || rechargeResponse?.data?.status === "FAILURE") {
@@ -338,8 +334,7 @@ console.log("req.body--------------------------------->>", req.body)
                                     apiResponse: "FAILURE",
                                      apiId:"a1"
                                 })
-                                console.log("update Transation", updateTransationStatus)
-
+                                
                                 //Refund logic 
 
                                 let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
