@@ -326,8 +326,8 @@ console.log("req.body--------------------------------->>", req.body)
                             };
 
                             // const rechargeResponse = await axios.get('https://business.a1topup.com/recharge/api', { params })
-                            const rechargeResponse = await a1RechargeService.rechargeExchange(params)
-                            // console.log(rechargeResponse.data)
+                            const rechargeResponse = await a1RechargeService.a1Recharge(params)
+                            console.log("a1 recharge response  ---->>>> ",rechargeResponse)
 
 
                             //   Recharge failled Logic 

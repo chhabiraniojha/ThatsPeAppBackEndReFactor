@@ -421,7 +421,7 @@ exports.vegaahCallback = async (req, res) => {
         // await new Promise((resolve) => setTimeout(resolve, 3000));
         // let rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
 
-        // console.log('recharge response-----------xxx', rechargeResponse);
+        console.log('recharge response-----------xxx', rechargeResponse);
 
         // console.log('recharge response-----------xxx', rechargeResult);
         await orderRecord.update(

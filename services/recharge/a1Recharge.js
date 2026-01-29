@@ -1,8 +1,10 @@
 const axios = require('axios')
 
-exports.rechargeExchange = async (params) => {
+exports.a1Recharge = async (params) => {
   try {
-    const rechargeResponse = await axios.get('https://business.a1topup.com/recharge/api', { params })
+    console.log("params  for  a1",params)
+    const rechargeResponse = await axios.get('https://business.a1topup.com/recharge/api', { params }) 
+    console.log("a1 orginal response ---- > ",rechargeResponse)
     return rechargeResponse
   } catch (error) {
     return {
