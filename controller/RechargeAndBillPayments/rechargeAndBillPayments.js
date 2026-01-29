@@ -204,7 +204,7 @@ console.log("req.body--------------------------------->>", req.body)
                     //     operator: cyrusOperatorCode,
                     //     circle: cyrusCircleCode,
                     //     amount: amount,
-                    //     usertx: initiateTransaction.data.rechargeTransaction.Id,
+                    //     usertx: initiateTransaction.data.rechargeTransaction.id,
                     //     format: 'json',
                     //     RechargeMode: '1'
                     // };
@@ -242,7 +242,7 @@ console.log("req.body--------------------------------->>", req.body)
                     if (roboticReachargeResponse?.data?.STATUS == 2) {
                     
                         const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                            rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
+                            rechargeTransactionId: initiateTransaction.data.rechargeTransaction.id,
                             apiResponse: "PENDING",
                             apiId: "robotics"
                         })
@@ -253,7 +253,7 @@ console.log("req.body--------------------------------->>", req.body)
                     // RoboticReachargeResponse is Success
                     if (roboticReachargeResponse?.data?.STATUS == 1) {
                         const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                            rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
+                            rechargeTransactionId: initiateTransaction.data.rechargeTransaction.id,
                             apiResponse: "SUCCESS",
                             apiId: "robotics"
                         })
@@ -285,7 +285,7 @@ console.log("req.body--------------------------------->>", req.body)
                         if (rechargeExchangeResponse?.data?.status == "PENDING"){
                              
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                                    rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
+                                    rechargeTransactionId: initiateTransaction.data.rechargeTransaction.id,
                                     apiResponse: "PENDING",
                                     apiId:"rechargeExchange"
                                 })
@@ -295,7 +295,7 @@ console.log("req.body--------------------------------->>", req.body)
                         }
                         if (rechargeExchangeResponse?.data?.status == "SUCCESS") {
                             const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                                rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
+                                rechargeTransactionId: initiateTransaction.data.rechargeTransaction.id,
                                 apiResponse: "SUCCESS",
                                  apiId:"rechargeExchange"
                             })
@@ -334,7 +334,7 @@ console.log("req.body--------------------------------->>", req.body)
                             //   Recharge failled Logic 
                             if (rechargeResponse?.data?.Status === "Failure" || rechargeResponse?.data?.status === "Failure" || rechargeResponse?.Status === "FAILURE" || rechargeResponse?.data?.status === "FAILURE") {
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                                    rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
+                                    rechargeTransactionId: initiateTransaction.data.rechargeTransaction.id,
                                     apiResponse: "FAILURE",
                                      apiId:"a1"
                                 })
@@ -343,7 +343,7 @@ console.log("req.body--------------------------------->>", req.body)
                                 //Refund logic 
 
                                 let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
-                                    allTransactionId: initiateTransaction.data.rechargeTransaction.Id
+                                    allTransactionId: initiateTransaction.data.rechargeTransaction.id
                                 })
                                 // console.log("refdundData", refdundData);
                          
@@ -354,7 +354,7 @@ console.log("req.body--------------------------------->>", req.body)
                             //  Recharge Success Logic 
                             else if (rechargeResponse?.data?.Status === "Success" || rechargeResponse?.data?.status === "Success") {
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                                    rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
+                                    rechargeTransactionId: initiateTransaction.data.rechargeTransaction.id,
                                     apiResponse: "SUCCESS",
                                      apiId:"a1"
                                 })
@@ -370,7 +370,7 @@ console.log("req.body--------------------------------->>", req.body)
                             else {
                               
                                 const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                                    rechargeTransactionId: initiateTransaction.data.rechargeTransaction.Id,
+                                    rechargeTransactionId: initiateTransaction.data.rechargeTransaction.id,
                                     apiResponse: "PENDING",
                                     apiId: "a1"
                                 })
