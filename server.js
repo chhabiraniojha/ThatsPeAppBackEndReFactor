@@ -98,6 +98,7 @@ const app = express()
 
 app.use(bodyParser.json({ extended: false }));
 app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.set('trust proxy', true);
 
 
