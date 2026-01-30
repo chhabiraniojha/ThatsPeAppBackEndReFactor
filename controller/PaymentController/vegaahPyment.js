@@ -8,6 +8,9 @@ const operatorModel = require('../../models/OperatorDataModel/operatorData');
 const walletOrderModel = require('../../models/OrderModel/walletOrder');
 const walletModel = require('../../models/WalletModels/WalletSchema/wallet');
 const walletController = require('../../controller/WalletController/wallet');
+const successHTML = require('../../templates/paymentSuccess');
+const failureHTML = require('../../templates/paymentFailed');
+const pendingHTML = require('../../templates/paymentPending');
 
 exports.generateSignature = async (req, res) => {
   try {
@@ -493,15 +496,22 @@ exports.vegaahReceipt = async (req, res) => {
 
     console.log('DECRYPTED----:', decrypted);
     console.log('DECRYPTED RESULT----:', decrypted?.result);
-    if( decrypted?.result==="SUCCESS"){
-      //  res.redirect('https://thatspe.in');
-      return;
+    if (decrypted?.result === 'SUCCESS') {
+      res.send(successHTML());
+      //  return res.send(pendingHTML());
+      // return res.send(failureHTML());
+    }
+    if (decrypted?.result === 'FAILURE') {
+      res.send(failureHTML());
+    }
+    if (decrypted?.result === 'PENDING') {
+      res.send(pendingHTML());
     }
 
     // const { payload } = req.body;
-    
+
     // const payloadString = JSON.stringify(payload);
-// ------------------------------- signature generation for receipt verification ----------------
+    // ------------------------------- signature generation for receipt verification ----------------
     const dataToHash = decrypted?.transactionId + '|' + secretKey + '|' + decrypted?.responseCode + '|' + decrypted?.amountDetails?.amount;
 
     console.log('STRING TO HASH:--->', dataToHash);
@@ -509,29 +519,28 @@ exports.vegaahReceipt = async (req, res) => {
     const generatedSignature = crypto.createHash('sha256').update(dataToHash).digest('hex');
 
     console.log('GENERATED SIGNATURE:--->', generatedSignature);
-// -------------------------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------------------
 
-if(recivedSignature!==generatedSignature){
-  // return res.status(200).json({ message: 'Invalid Signature', status: 'failed' });
-  return;
-}
-
+    if (recivedSignature !== generatedSignature) {
+      // return res.status(200).json({ message: 'Invalid Signature', status: 'failed' });
+      return;
+    }
 
     // return res.status(200).json({ message: 'Receipt Received', data: decrypted });
 
     const data = req.method === 'POST' ? req.body : req.query;
     // console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
-    const { result,  customerDetails, event, transactionId, responseCode, rrn, merchantName } = decrypted || {};
+    const { result, customerDetails, event, transactionId, responseCode, rrn, merchantName } = decrypted || {};
 
-    const amount=decrypted?.amountDetails?.amount;
-    const orginalAmount=decrypted?.amountDetails?.originalAmount;
-    const orderId=decrypted?.orderDetails?.orderId;
+    const amount = decrypted?.amountDetails?.amount;
+    const orginalAmount = decrypted?.amountDetails?.originalAmount;
+    const orderId = decrypted?.orderDetails?.orderId;
 
-    if(amount!=orginalAmount){  
+    if (amount != orginalAmount) {
       // return res.status(200).json({ message: 'Payment Failed Due To Amount Mismatch', status: 'success' });
       return;
     }
-    if ( responseCode !== '000' || result !== 'SUCCESS') {
+    if (responseCode !== '000' || result !== 'SUCCESS') {
       // return res.status(200).json({ message: 'Payment Failed', status: 'success' });
       return;
     }
@@ -543,7 +552,7 @@ if(recivedSignature!==generatedSignature){
     if (!paymentRecord) {
       console.log('Payment record not found for transactionId:', transactionId);
       // return res.status(200).json({ message: 'PAYMENT RECORD NOT FOUND', status: 'failed' });
-      return
+      return;
     }
 
     let paymentId, paymentStatus, paymentOrderId, paymentAmount, responseCodeRecord, purpose;
@@ -566,7 +575,7 @@ if(recivedSignature!==generatedSignature){
     if ((paymentStatus === 'SUCCESS' || paymentStatus === 'FAILED') && responseCodeRecord === '000') {
       console.log('Payment already processed:', paymentId);
       // return res.status(200).json({ message: 'PAYMENT ALREADY PROCESSED' });
-      return
+      return;
     }
 
     //check both order id  is same
@@ -621,7 +630,7 @@ if(recivedSignature!==generatedSignature){
     //now  check the  anout and response code  and  other details like event result and  payment table status  then update the payment table
     if (
       // paymentAmount == amount &&
-      responseCode === '000' &&      
+      responseCode === '000' &&
       result === 'SUCCESS' &&
       orderStatus === 'CREATED'
     ) {
@@ -663,7 +672,7 @@ if(recivedSignature!==generatedSignature){
     // now  we move recharge  if payment success and then update the order table status
 
     if (
-      responseCode === '000' &&      
+      responseCode === '000' &&
       result === 'SUCCESS' &&
       paymentRecord.status === 'SUCCESS' &&
       (purpose == 'recharge' ? orderRecord?.status === 'PROCESSING' : walletOrderRecord?.status === 'PROCESSING')
