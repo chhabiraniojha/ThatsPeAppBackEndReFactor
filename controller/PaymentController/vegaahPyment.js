@@ -523,7 +523,7 @@ if(recivedSignature!==generatedSignature){
 
     const amount=decrypted?.amountDetails?.amount;
     const orginalAmount=decrypted?.amountDetails?.originalAmount;
-    const orderId=decrypted?.orderId;
+    const orderId=decrypted?.orderDetails?.orderId;
 
     if(amount!=orginalAmount){  
       return res.status(200).json({ message: 'Payment Failed Due To Amount Mismatch', status: 'success' });
@@ -538,7 +538,7 @@ if(recivedSignature!==generatedSignature){
     // console.log('PAYMENT RECORD FOUND:', paymentRecord);
     if (!paymentRecord) {
       console.log('Payment record not found for transactionId:', transactionId);
-      return res.status(200).send('PAYMENT RECORD NOT FOUND');
+      return res.status(200).json({ message: 'PAYMENT RECORD NOT FOUND', status: 'failed' });
     }
 
     let paymentId, paymentStatus, paymentOrderId, paymentAmount, responseCodeRecord, purpose;
