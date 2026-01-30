@@ -160,7 +160,7 @@ exports.payRequest = async (req, res) => {
       trackId: purpose == 'recharge' ? orderId : walletOrderId,
       terminalId: process.env.VEGAH_TERMINAL_ID,
       password: process.env.VEGAH_PASSWORD,
-      amount: '01.00',  // it  will be change later
+      amount: '01.00', // it  will be change later
       currency: 'INR'
     };
     const secretKey = process.env.VEGAH_SECRET_KEY;
@@ -246,14 +246,13 @@ exports.payRequest = async (req, res) => {
 //   try {
 //     // 1️⃣ Read callback payload
 //     console.log("request query from  veghaa --->",req.query)
-    
+
 //     const data = req.method === 'POST' ? req.body : req.query;
 //     // console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
 //     const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
 //     if(event!=='Transaction.Success'||responseCode!=='000'||result!=='SUCCESS'){
 //       return res.status(200).json({ message: 'Payment Failed', status: 'success' });
 //     }
-
 
 //     const paymentRecord = await Payment.findOne({
 //       where: { gatewayTransactionId: transactionId }
@@ -285,7 +284,6 @@ exports.payRequest = async (req, res) => {
 //       console.log('Payment already processed:', paymentId);
 //       return res.status(200).json({ message: 'PAYMENT ALREADY PROCESSED' });
 //     }
-
 
 //     //check both order id  is same
 //     if (paymentOrderId !== orderId) {
@@ -472,21 +470,67 @@ exports.payRequest = async (req, res) => {
 //     return res.status(500).json({ message: 'Internal Server Error', success: false, statuscode: 0, error: error });
 //   }
 // };
+
 exports.vegaahReceipt = async (req, res) => {
   try {
-    // 1️⃣ Read callback payload
+    console.log('Query:', req.query);
+    console.log('Body:', req.body);
+    const secretKey = process.env.VEGAH_SECRET_KEY;
+    let encryptedData = decodeURIComponent(req.body.data);
+    encryptedData = encryptedData.replace('data=', '');
 
-    console.log("request query from  veghaaRecipt ---------- vega query ",req.query)
-    console.log("request query from  veghaaRecipt ---------- vega body ",req.body)
-    return res.status(200).send('OK');
+    const key = Buffer.from(secretKey, 'hex'); // OR utf8 (see below)
+
+    const encryptedBuffer = Buffer.from(encryptedData, 'base64');
+
+    const decipher = crypto.createDecipheriv('aes-256-ecb', key, null);
+    decipher.setAutoPadding(true);
+
+    let decrypted = decipher.update(encryptedBuffer, undefined, 'utf8');
+    decrypted += decipher.final('utf8');
+    decrypted = JSON.parse(decrypted);
+    const recivedSignature = decrypted.signature;
+
+    console.log('DECRYPTED----:', decrypted);
+    console.log('DECRYPTED RESULT----:', decrypted?.result);
+    // if( decrypted?.result==="SUCCESS"){
+    //    res.redirect('https://thatspe.com');
+    // }
+
+    // const { payload } = req.body;
     
+    // const payloadString = JSON.stringify(payload);
+// ------------------------------- signature generation for receipt verification ----------------
+    const dataToHash = decrypted?.transactionId + '|' + secretKey + '|' + decrypted?.responseCode + '|' + decrypted?.amountDetails?.amount;
+
+    console.log('STRING TO HASH:--->', dataToHash);
+
+    const generatedSignature = crypto.createHash('sha256').update(dataToHash).digest('hex');
+
+    console.log('GENERATED SIGNATURE:--->', generatedSignature);
+// -------------------------------------------------------------------------------------------------
+
+if(recivedSignature!==generatedSignature){
+  return res.status(200).json({ message: 'Invalid Signature', status: 'failed' });
+}
+
+
+    // return res.status(200).json({ message: 'Receipt Received', data: decrypted });
+
     const data = req.method === 'POST' ? req.body : req.query;
     // console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
-    const { result, vpaId, amount, userData, orderId, event, transactionId, responseCode, rrn, merchantName } = data || {};
-    if(event!=='Transaction.Success'||responseCode!=='000'||result!=='SUCCESS'){
+    const { result,  customerDetails, event, transactionId, responseCode, rrn, merchantName } = decrypted || {};
+
+    const amount=decrypted?.amountDetails?.amount;
+    const orginalAmount=decrypted?.amountDetails?.originalAmount;
+    const orderId=decrypted?.orderId;
+
+    if(amount!=orginalAmount){  
+      return res.status(200).json({ message: 'Payment Failed Due To Amount Mismatch', status: 'success' });
+    }
+    if ( responseCode !== '000' || result !== 'SUCCESS') {
       return res.status(200).json({ message: 'Payment Failed', status: 'success' });
     }
-
 
     const paymentRecord = await Payment.findOne({
       where: { gatewayTransactionId: transactionId }
@@ -518,7 +562,6 @@ exports.vegaahReceipt = async (req, res) => {
       console.log('Payment already processed:', paymentId);
       return res.status(200).json({ message: 'PAYMENT ALREADY PROCESSED' });
     }
-
 
     //check both order id  is same
     if (paymentOrderId !== orderId) {
@@ -569,8 +612,7 @@ exports.vegaahReceipt = async (req, res) => {
     //now  check the  anout and response code  and  other details like event result and  payment table status  then update the payment table
     if (
       // paymentAmount == amount &&
-      responseCode === '000' &&
-      event === 'Transaction.Success' &&
+      responseCode === '000' &&      
       result === 'SUCCESS' &&
       orderStatus === 'CREATED'
     ) {
@@ -612,8 +654,7 @@ exports.vegaahReceipt = async (req, res) => {
     // now  we move recharge  if payment success and then update the order table status
 
     if (
-      responseCode === '000' &&
-      event === 'Transaction.Success' &&
+      responseCode === '000' &&      
       result === 'SUCCESS' &&
       paymentRecord.status === 'SUCCESS' &&
       (purpose == 'recharge' ? orderRecord?.status === 'PROCESSING' : walletOrderRecord?.status === 'PROCESSING')
@@ -799,7 +840,7 @@ exports.orderStatusCheck = async (req, res) => {
       }
     }
   } catch (error) {
-    // console.error('Order Status Check Error:', error);  
+    // console.error('Order Status Check Error:', error);
     return res.status(500).json({ error, message: 'Internal Server Error' });
   }
 };
