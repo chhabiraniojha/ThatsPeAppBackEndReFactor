@@ -494,7 +494,8 @@ exports.vegaahReceipt = async (req, res) => {
     console.log('DECRYPTED----:', decrypted);
     console.log('DECRYPTED RESULT----:', decrypted?.result);
     if( decrypted?.result==="SUCCESS"){
-       res.redirect('https://thatspe.in');
+      //  res.redirect('https://thatspe.in');
+      return;
     }
 
     // const { payload } = req.body;
