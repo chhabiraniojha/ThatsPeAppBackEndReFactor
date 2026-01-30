@@ -476,7 +476,8 @@ exports.vegaahReceipt = async (req, res) => {
   try {
     // 1️⃣ Read callback payload
 
-    console.log("request query from  veghaaRecipt ---------- vega ",req)
+    console.log("request query from  veghaaRecipt ---------- vega query ",req.query)
+    console.log("request query from  veghaaRecipt ---------- vega body ",req.body)
     return res.status(200).send('OK');
     
     const data = req.method === 'POST' ? req.body : req.query;
