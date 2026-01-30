@@ -493,9 +493,9 @@ exports.vegaahReceipt = async (req, res) => {
 
     console.log('DECRYPTED----:', decrypted);
     console.log('DECRYPTED RESULT----:', decrypted?.result);
-    // if( decrypted?.result==="SUCCESS"){
-    //    res.redirect('https://thatspe.com');
-    // }
+    if( decrypted?.result==="SUCCESS"){
+       res.redirect('https://thatspe.in');
+    }
 
     // const { payload } = req.body;
     
@@ -511,7 +511,8 @@ exports.vegaahReceipt = async (req, res) => {
 // -------------------------------------------------------------------------------------------------
 
 if(recivedSignature!==generatedSignature){
-  return res.status(200).json({ message: 'Invalid Signature', status: 'failed' });
+  // return res.status(200).json({ message: 'Invalid Signature', status: 'failed' });
+  return;
 }
 
 
@@ -526,10 +527,12 @@ if(recivedSignature!==generatedSignature){
     const orderId=decrypted?.orderDetails?.orderId;
 
     if(amount!=orginalAmount){  
-      return res.status(200).json({ message: 'Payment Failed Due To Amount Mismatch', status: 'success' });
+      // return res.status(200).json({ message: 'Payment Failed Due To Amount Mismatch', status: 'success' });
+      return;
     }
     if ( responseCode !== '000' || result !== 'SUCCESS') {
-      return res.status(200).json({ message: 'Payment Failed', status: 'success' });
+      // return res.status(200).json({ message: 'Payment Failed', status: 'success' });
+      return;
     }
 
     const paymentRecord = await Payment.findOne({
@@ -538,7 +541,8 @@ if(recivedSignature!==generatedSignature){
     // console.log('PAYMENT RECORD FOUND:', paymentRecord);
     if (!paymentRecord) {
       console.log('Payment record not found for transactionId:', transactionId);
-      return res.status(200).json({ message: 'PAYMENT RECORD NOT FOUND', status: 'failed' });
+      // return res.status(200).json({ message: 'PAYMENT RECORD NOT FOUND', status: 'failed' });
+      return
     }
 
     let paymentId, paymentStatus, paymentOrderId, paymentAmount, responseCodeRecord, purpose;
@@ -560,13 +564,15 @@ if(recivedSignature!==generatedSignature){
 
     if ((paymentStatus === 'SUCCESS' || paymentStatus === 'FAILED') && responseCodeRecord === '000') {
       console.log('Payment already processed:', paymentId);
-      return res.status(200).json({ message: 'PAYMENT ALREADY PROCESSED' });
+      // return res.status(200).json({ message: 'PAYMENT ALREADY PROCESSED' });
+      return
     }
 
     //check both order id  is same
     if (paymentOrderId !== orderId) {
       console.log('Order ID mismatch for paymentId:', paymentId);
-      return res.status(200).json('ORDER ID MISMATCH');
+      // return res.status(200).json('ORDER ID MISMATCH');
+      return;
     }
 
     //find the  order using orderId  for specific order type recharge or wallet addfund
@@ -587,7 +593,8 @@ if(recivedSignature!==generatedSignature){
       console.log('walletOrderRecord   FOUND:', walletOrderRecord);
       if (!walletOrderRecord) {
         console.error('walletOrderRecord not found for orderId:', orderId);
-        return res.status(200).json('ORDER RECORD NOT FOUND');
+        // return res.status(200).json('ORDER RECORD NOT FOUND');
+        return;
       }
       orderStatus = walletOrderRecord?.status;
       orderAmount = walletOrderRecord?.amount;
@@ -596,7 +603,8 @@ if(recivedSignature!==generatedSignature){
       console.log('ORDER RECORD FOUND:', orderRecord);
       if (!orderRecord) {
         console.error('Order record not found for orderId:', orderId);
-        return res.status(200).json('ORDER RECORD NOT FOUND');
+        // return res.status(200).json('ORDER RECORD NOT FOUND');
+        return;
       }
       orderStatus = orderRecord?.status;
       orderAmount = orderRecord?.amount;
@@ -727,7 +735,8 @@ if(recivedSignature!==generatedSignature){
         await walletOrderRecord.save();
       }
 
-      return res.status(200).json({ message: 'recharge succes  :)', status: 'true' });
+      // return res.status(200).json({ message: 'recharge succes  :)', status: 'true' });
+      return;
       // TODO:
       // 1. Check if transaction already processed
       // 2. Mark transaction SUCCESS in DB
@@ -736,7 +745,8 @@ if(recivedSignature!==generatedSignature){
       // ❌ PAYMENT FAILED
       // TODO:
       // 1. Mark transaction FAILED in DB
-      return res.status(200).json({ message: 'Payment Failed', status: 'success' });
+      // return res.status(200).json({ message: 'Payment Failed', status: 'success' });
+      return;
     }
 
     // 6️⃣ Respond OK (VERY IMPORTANT)
