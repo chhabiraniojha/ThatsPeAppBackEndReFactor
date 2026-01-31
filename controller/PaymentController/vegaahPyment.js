@@ -766,6 +766,7 @@ exports.payRequest = async (req, res) => {
 //     return res.status(500).json({ message: 'Internal Server Error', success: false, statuscode: 0, error: error });
 //   }
 // };
+
 exports.vegaahReceipt = async (req, res) => {
   try {
     /* --------------------------------------------------
@@ -789,6 +790,7 @@ exports.vegaahReceipt = async (req, res) => {
     decrypted = JSON.parse(decrypted);
 
     const { transactionId, responseCode, result, rrn, signature, amountDetails, orderDetails } = decrypted;
+    console.log('step 1 done');
 
     /* --------------------------------------------------
        2. VERIFY SIGNATURE (FIRST GATE)
@@ -801,7 +803,7 @@ exports.vegaahReceipt = async (req, res) => {
       console.error('Invalid signature:', transactionId);
       return res.status(200).send('INVALID');
     }
-
+    console.log('step 2 done');
     /* --------------------------------------------------
        3. BASIC VALIDATIONS
     -------------------------------------------------- */
@@ -828,7 +830,7 @@ exports.vegaahReceipt = async (req, res) => {
 
       return res.send(failureHTML());
     }
-
+    console.log('step 3 done');
     /* --------------------------------------------------
        4. ATOMIC PAYMENT UPDATE (IDEMPOTENT)
     -------------------------------------------------- */
@@ -856,7 +858,7 @@ exports.vegaahReceipt = async (req, res) => {
     if (paymentUpdated === 0) {
       return res.send(successHTML());
     }
-
+    console.log('step 4 done');
     /* --------------------------------------------------
        5. FETCH PAYMENT (SAFE NOW)
     -------------------------------------------------- */
@@ -871,7 +873,7 @@ exports.vegaahReceipt = async (req, res) => {
 
     const { purpose, orderId, walletOrderId } = paymentRecord;
     const finalOrderId = purpose === 'addfund' ? walletOrderId : orderId;
-
+    console.log('step 5 done');
     /* --------------------------------------------------
        6. ATOMIC ORDER STATUS UPDATE
     -------------------------------------------------- */
@@ -903,7 +905,7 @@ exports.vegaahReceipt = async (req, res) => {
       console.log('Order already moved:', finalOrderId);
       return res.send(successHTML());
     }
-
+    console.log('step 6 done');
     /* --------------------------------------------------
    6.5 FIRE & FORGET ASYNC WORK 🚀
 -------------------------------------------------- */
@@ -1020,10 +1022,11 @@ exports.vegaahReceipt = async (req, res) => {
         // Retry cron will handle unfinished PROCESSING orders
       }
     });
-
+    console.log('step 6.5 done');
     /* -------------------------------------------------
        7. RESPOND TO GATEWAY FAST 🚀
     -------------------------------------------------- */
+    console.log('step 7 done');
     return res.send(successHTML());
   } catch (error) {
     console.error('Vegaah callback error:', error);
