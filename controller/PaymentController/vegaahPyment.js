@@ -995,6 +995,7 @@ setImmediate(async () => {
           `${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`,
           apiDataForRecharge
         );
+        console.log(rechargeResponse)
       } catch (apiErr) {
         console.error('Recharge API error:', finalOrderId, apiErr);
         return; // keep PROCESSING → retry later
