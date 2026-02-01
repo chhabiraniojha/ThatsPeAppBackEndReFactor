@@ -773,11 +773,14 @@ exports.vegaahReceipt = async (req, res) => {
        1. READ & DECRYPT CALLBACK
     -------------------------------------------------- */
     const secretKey = process.env.VEGAH_SECRET_KEY;
-    let encryptedData = decodeURIComponent(req.body.data);
-    encryptedData = encryptedData.replace('data=', '');
 
-    const key = Buffer.from(secretKey, 'hex'); // OR utf8 (see below)
+    if (!req.body?.data) {
+      return res.status(400).send('INVALID');
+    }
+    console.log('Vegaah Receipt Payload:', req.body);
 
+    let encryptedData = decodeURIComponent(req.body.data).replace('data=', '');
+    const key = Buffer.from(secretKey, 'hex');
     const encryptedBuffer = Buffer.from(encryptedData, 'base64');
 
     const decipher = crypto.createDecipheriv('aes-256-ecb', key, null);
@@ -786,275 +789,174 @@ exports.vegaahReceipt = async (req, res) => {
     let decrypted = decipher.update(encryptedBuffer, undefined, 'utf8');
     decrypted += decipher.final('utf8');
     decrypted = JSON.parse(decrypted);
-    const recivedSignature = decrypted.signature;
 
-    console.log('DECRYPTED----:', decrypted);
-    console.log('DECRYPTED RESULT----:', decrypted?.result);
-    if (decrypted?.result === 'SUCCESS') {
-      res.send(successHTML());
-      //  return res.send(pendingHTML());
-      // return res.send(failureHTML());
+    const {
+      transactionId,
+      responseCode,
+      result,
+      rrn,
+      signature,
+      amountDetails,
+      orderDetails
+    } = decrypted;
+
+    /* --------------------------------------------------
+       2. VERIFY SIGNATURE (FIRST GATE)
+    -------------------------------------------------- */
+    const dataToHash =
+      transactionId +
+      '|' +
+      secretKey +
+      '|' +
+      responseCode +
+      '|' +
+      amountDetails?.amount;
+
+    const generatedSignature = crypto
+      .createHash('sha256')
+      .update(dataToHash)
+      .digest('hex');
+
+    if (signature !== generatedSignature) {
+      console.error('Invalid signature:', transactionId);
+      return res.status(200).send('INVALID');
     }
-    if (decrypted?.result === 'FAILURE') {
-      res.send(failureHTML());
-    }
-    if (decrypted?.result === 'PENDING') {
-      res.send(pendingHTML());
-    }
 
-    // const { payload } = req.body;
-
-    // const payloadString = JSON.stringify(payload);
-    // ------------------------------- signature generation for receipt verification ----------------
-    const dataToHash = decrypted?.transactionId + '|' + secretKey + '|' + decrypted?.responseCode + '|' + decrypted?.amountDetails?.amount;
-
-    console.log('STRING TO HASH:--->', dataToHash);
-
-    const generatedSignature = crypto.createHash('sha256').update(dataToHash).digest('hex');
-
-    console.log('GENERATED SIGNATURE:--->', generatedSignature);
-    // -------------------------------------------------------------------------------------------------
-
-    if (recivedSignature !== generatedSignature) {
-      // return res.status(200).json({ message: 'Invalid Signature', status: 'failed' });
-      return;
+    /* --------------------------------------------------
+       3. BASIC VALIDATIONS
+    -------------------------------------------------- */
+    if (amountDetails?.amount !== amountDetails?.originalAmount) {
+      console.error('Amount mismatch:', transactionId);
+      return res.status(200).send('INVALID');
     }
 
-    // return res.status(200).json({ message: 'Receipt Received', data: decrypted });
-
-    const data = req.method === 'POST' ? req.body : req.query;
-    // console.log('---------------- >   Vegaah Callback Received: -------------> ', data);
-    const { result, customerDetails, event, transactionId, responseCode, rrn, merchantName } = decrypted || {};
-
-    const amount = decrypted?.amountDetails?.amount;
-    const orginalAmount = decrypted?.amountDetails?.originalAmount;
-    const orderId = decrypted?.orderDetails?.orderId;
-
-    if (amount != orginalAmount) {
-      // return res.status(200).json({ message: 'Payment Failed Due To Amount Mismatch', status: 'success' });
-      return;
-    }
     if (responseCode !== '000' || result !== 'SUCCESS') {
-      // return res.status(200).json({ message: 'Payment Failed', status: 'success' });
-      return;
+      // Mark FAILED safely (idempotent)
+      await Payment.update(
+        {
+          status: 'FAILED',
+          responseCode,
+          rawCallback: { transactionId, responseCode, result }
+        },
+        {
+          where: {
+            gatewayTransactionId: transactionId,
+            status: 'CREATED'
+          }
+        }
+      );
+
+      return res.send(failureHTML());
     }
 
+    /* --------------------------------------------------
+       4. ATOMIC PAYMENT UPDATE (IDEMPOTENT)
+    -------------------------------------------------- */
+    const [paymentUpdated] = await Payment.update(
+      {
+        status: 'SUCCESS',
+        responseCode,
+        rrn,
+        rawCallback: {
+          transactionId,
+          responseCode,
+          result,
+          rrn
+        }
+      },
+      {
+        where: {
+          gatewayTransactionId: transactionId,
+          status: 'CREATED'
+        }
+      }
+    );
+
+    // Already processed (duplicate callback)
+    if (paymentUpdated === 0) {
+      return res.send(successHTML());
+    }
+
+    /* --------------------------------------------------
+       5. FETCH PAYMENT (SAFE NOW)
+    -------------------------------------------------- */
     const paymentRecord = await Payment.findOne({
       where: { gatewayTransactionId: transactionId }
     });
 
     if (!paymentRecord) {
-      console.log('Payment record not found for transactionId:', transactionId);
-      // return res.status(200).json({ message: 'PAYMENT RECORD NOT FOUND', status: 'failed' });
-      return;
+      console.error('Payment not found:', transactionId);
+      return res.send(successHTML());
     }
 
-    let paymentId, paymentStatus, paymentOrderId, paymentAmount, responseCodeRecord, purpose;
-    purpose = paymentRecord.purpose;
-    paymentId = paymentRecord.id;
-    paymentStatus = paymentRecord.status;
-    paymentOrderId = purpose === 'addfund' ? paymentRecord.walletOrderId : paymentRecord.orderId;
-    paymentAmount = paymentRecord.amount;
-    responseCodeRecord = paymentRecord.responseCode;
+    const { purpose, orderId, walletOrderId } = paymentRecord;
+    const finalOrderId = purpose === 'addfund' ? walletOrderId : orderId;
 
-    // importnat it will uncoment later in Production *****
+    /* --------------------------------------------------
+       6. ATOMIC ORDER STATUS UPDATE
+    -------------------------------------------------- */
+let orderUpdated = 0;
 
-    // if(paymentAmount!=amount){
-    //   // console.log('Amount mismatch for paymentId:', paymentId);
-    //    return res.status(200).json({ message: 'Payment Failed Due To Amount Mismatch', status: 'success' });
-    // }
-
-    //check the paymet record status is already success or not to handle multiple callback
-
-    if ((paymentStatus === 'SUCCESS' || paymentStatus === 'FAILED') && responseCodeRecord === '000') {
-      console.log('Payment already processed:', paymentId);
-      // return res.status(200).json({ message: 'PAYMENT ALREADY PROCESSED' });
-      return;
+if (purpose === 'addfund') {
+  [orderUpdated] = await walletOrderModel.update(
+    { status: 'PROCESSING' },
+    {
+      where: {
+        id: finalOrderId,
+        status: 'CREATED'
+      }
     }
-
-    //check both order id  is same
-    if (paymentOrderId !== orderId) {
-      console.log('Order ID mismatch for paymentId:', paymentId);
-      // return res.status(200).json('ORDER ID MISMATCH');
-      return;
+  );
+} else {
+  [orderUpdated] = await Order.update(
+    { status: 'PROCESSING' },
+    {
+      where: {
+        id: finalOrderId,
+        status: 'CREATED'
+      }
     }
+  );
+}
 
-    //find the  order using orderId  for specific order type recharge or wallet addfund
-    let orderRecord, walletOrderRecord;
+if (orderUpdated === 0) {
+  console.log('Order already moved:', finalOrderId);
+  return res.send(successHTML());
+}
 
-    if (purpose == 'addfund') {
-      walletOrderRecord = await walletOrderModel.findOne({
-        where: { id: orderId }
+/* --------------------------------------------------
+   6.5 FIRE & FORGET ASYNC WORK 🚀
+-------------------------------------------------- */
+setImmediate(async () => {
+  try {
+    console.log('Async processing started for:', transactionId);
+
+    if (purpose === 'addfund') {
+      await walletController.addFund({
+        paymentTransactionId: paymentRecord.id,
+        userId: paymentRecord.userId,
+        amount: paymentRecord.amount
       });
-    } else if (purpose == 'recharge') {
-      orderRecord = await Order.findOne({
-        where: { id: orderId }
-      });
-    }
-    let orderStatus, orderAmount, orderUserId, orderServiceRef, orderOperator, orderCircle, orderServiceType, orderOperatorType;
-
-    if (purpose == 'addfund') {
-      console.log('walletOrderRecord   FOUND:', walletOrderRecord);
-      if (!walletOrderRecord) {
-        console.error('walletOrderRecord not found for orderId:', orderId);
-        // return res.status(200).json('ORDER RECORD NOT FOUND');
-        return;
-      }
-      orderStatus = walletOrderRecord?.status;
-      orderAmount = walletOrderRecord?.amount;
-      orderUserId = walletOrderRecord?.userId;
-    } else if (purpose == 'recharge') {
-      console.log('ORDER RECORD FOUND:', orderRecord);
-      if (!orderRecord) {
-        console.error('Order record not found for orderId:', orderId);
-        // return res.status(200).json('ORDER RECORD NOT FOUND');
-        return;
-      }
-      orderStatus = orderRecord?.status;
-      orderAmount = orderRecord?.amount;
-      orderUserId = orderRecord?.userId;
-      orderServiceRef = orderRecord?.serviceRef;
-      orderOperator = orderRecord?.operator;
-      orderCircle = orderRecord?.circle;
-      orderServiceType = orderRecord?.serviceType;
-      orderOperatorType = orderRecord?.operatorType;
-    }
-    // if ((paymentStatus === 'SUCCESS'||paymentStatus === 'FAILED') && responseCodeRecord === '000'&& orderStatus==='CREATED') {}
-
-    //now  check the  anout and response code  and  other details like event result and  payment table status  then update the payment table
-    if (
-      // paymentAmount == amount &&
-      responseCode === '000' &&
-      result === 'SUCCESS' &&
-      orderStatus === 'CREATED'
-    ) {
-      //update payment table status to success
-      await paymentRecord.update(
-        {
-          status: 'SUCCESS',
-          rrn: rrn,
-          rawCallback: data,
-          responseCode: responseCode,
-          userId: orderUserId
-        },
-        { where: { gatewayTransactionId: transactionId } }
-      );
-
-      await paymentRecord.save();
-
-      if (purpose == 'addfund') {
-        //update wallet order table status to success
-        await walletOrderRecord.update(
-          {
-            status: 'PROCESSING'
-          },
-          { where: { id: orderId } }
-        );
-
-        await walletOrderRecord.save();
-      } else if (purpose == 'recharge') {
-        await orderRecord.update(
-          {
-            status: 'PROCESSING'
-          },
-          { where: { id: orderId } }
-        );
-        await orderRecord.save();
-      }
-    }
-
-    // now  we move recharge  if payment success and then update the order table status
-
-    if (
-      responseCode === '000' &&
-      result === 'SUCCESS' &&
-      paymentRecord.status === 'SUCCESS' &&
-      (purpose == 'recharge' ? orderRecord?.status === 'PROCESSING' : walletOrderRecord?.status === 'PROCESSING')
-    ) {
-      // recharge logic here
-      //update order table status to success after recharge
-      //generate  random number from 1 to 3 to simulate recharge success or failure
-      // lets rady the data for recharge
-      let apiDataForRecharge;
-
-      if (purpose == 'addfund') {
-        dataForWalletAdd = {
-          userId: orderUserId,
-          amount: orderAmount,
-          transactionId: paymentId
-        };
-      } else if (purpose == 'recharge') {
-        apiDataForRecharge = {
-          ezytm_circle_code: orderCircle,
-          ezytm_operator_code: orderOperator,
-          customer_number: orderServiceRef,
-          amount: orderAmount,
-          paymentTransactionId: paymentId,
-          subCategoryId: orderServiceType,
-          transactionType: 'cash',
-          status: 'pending',
-          rechargeType: orderOperatorType,
-          discountedAmount: paymentAmount,
-          userId: orderUserId,
-          finalAmount: paymentAmount
-        };
-      }
-
-      // console.log('API DATA FOR RECHARGE:--->', dataForWalletAdd);
-
-      //recharge api call simulation
-      if (purpose == 'recharge') {
-        const rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`, apiDataForRecharge);
-        // await new Promise((resolve) => setTimeout(resolve, 3000));
-        // let rechargeResult = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
-
-        // console.log('recharge response-----------xxx', rechargeResponse);
-
-        // console.log('recharge response-----------xxx', rechargeResult);
-        await orderRecord.update(
-          {
-            // status: rechargeResult == 1 ? 'SUCCESS' : rechargeResult == 0 ? 'FAILED' : 'PENDING'
-            status: rechargeResponse?.data?.statuscode == 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode == 0 ? 'FAILED' : 'PENDING'
-          },
-          { where: { id: orderId } }
-        );
-        await orderRecord.save();
-      }
-      // add fund process
-      else if (purpose == 'addfund') {
-        //wallet add fund process
-        const addFundResponse = await walletController.addFund({
-          amount: dataForWalletAdd.amount,
-          paymentTransactionId: dataForWalletAdd.transactionId,
-          userId: dataForWalletAdd.userId
-        });
-        console.log('Add Fund Response:', addFundResponse);
-
-        await walletOrderRecord.update(
-          {
-            status: addFundResponse?.statuscode == 1 ? 'SUCCESS' : 'FAILED'
-          },
-          { where: { id: orderId } }
-        );
-        await walletOrderRecord.save();
-      }
-
-      // return res.status(200).json({ message: 'recharge succes  :)', status: 'true' });
-      return;
-      // TODO:
-      // 1. Check if transaction already processed
-      // 2. Mark transaction SUCCESS in DB
-      // 3. Perform recharge / business logic
     } else {
-      // ❌ PAYMENT FAILED
-      // TODO:
-      // 1. Mark transaction FAILED in DB
-      // return res.status(200).json({ message: 'Payment Failed', status: 'success' });
-      return;
+      await rechargeService.processRecharge({
+        orderId: finalOrderId,
+        paymentId: paymentRecord.id
+      });
     }
 
-    // 6️⃣ Respond OK (VERY IMPORTANT)
-    // return res.status(200).send('OK');
+    console.log('Async processing completed:', transactionId);
+  } catch (err) {
+    console.error('Async failed', {transactionId,orderId: finalOrderId,err});
+    // ❗ DO NOT throw
+    // Let retry cron handle this
+  }
+});
+
+    /* -------------------------------------------------
+       7. RESPOND TO GATEWAY FAST 🚀
+    -------------------------------------------------- */
+    return res.send(successHTML());
+
   } catch (error) {
     console.error('Vegaah callback error:', error);
     return res.status(500).send('ERROR');
