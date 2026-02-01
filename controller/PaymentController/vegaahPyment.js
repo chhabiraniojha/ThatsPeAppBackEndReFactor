@@ -789,33 +789,16 @@ exports.vegaahReceipt = async (req, res) => {
     let decrypted = decipher.update(encryptedBuffer, undefined, 'utf8');
     decrypted += decipher.final('utf8');
     decrypted = JSON.parse(decrypted);
+    console.log('Decrypted Receipt Data:', decrypted);
 
-    const {
-      transactionId,
-      responseCode,
-      result,
-      rrn,
-      signature,
-      amountDetails,
-      orderDetails
-    } = decrypted;
+    const { transactionId, responseCode, result, rrn, signature, amountDetails, orderDetails } = decrypted;
 
     /* --------------------------------------------------
        2. VERIFY SIGNATURE (FIRST GATE)
     -------------------------------------------------- */
-    const dataToHash =
-      transactionId +
-      '|' +
-      secretKey +
-      '|' +
-      responseCode +
-      '|' +
-      amountDetails?.amount;
+    const dataToHash = transactionId + '|' + secretKey + '|' + responseCode + '|' + amountDetails?.amount;
 
-    const generatedSignature = crypto
-      .createHash('sha256')
-      .update(dataToHash)
-      .digest('hex');
+    const generatedSignature = crypto.createHash('sha256').update(dataToHash).digest('hex');
 
     if (signature !== generatedSignature) {
       console.error('Invalid signature:', transactionId);
@@ -841,7 +824,7 @@ exports.vegaahReceipt = async (req, res) => {
         {
           where: {
             gatewayTransactionId: transactionId,
-            status: 'CREATED'
+            status: 'INITIATED'
           }
         }
       );
@@ -852,28 +835,25 @@ exports.vegaahReceipt = async (req, res) => {
     /* --------------------------------------------------
        4. ATOMIC PAYMENT UPDATE (IDEMPOTENT)
     -------------------------------------------------- */
-    const [paymentUpdated] = await Payment.update(
+    const paymentUpdated = await Payment.update(
       {
         status: 'SUCCESS',
-        responseCode,
         rrn,
-        rawCallback: {
-          transactionId,
-          responseCode,
-          result,
-          rrn
-        }
+        responseCode,
+        rawCallback: decrypted
       },
       {
         where: {
           gatewayTransactionId: transactionId,
-          status: 'CREATED'
+          status: 'INITIATED'
         }
       }
     );
+    console.log('Payment update result:', paymentUpdated);
 
-    // Already processed (duplicate callback)
-    if (paymentUpdated === 0) {
+    const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
+    console.log('Affected payment rows:', affectedPaymentRows);
+    if (affectedPaymentRows === 0) {
       return res.send(successHTML());
     }
 
@@ -895,35 +875,38 @@ exports.vegaahReceipt = async (req, res) => {
     /* --------------------------------------------------
        6. ATOMIC ORDER STATUS UPDATE
     -------------------------------------------------- */
-let orderUpdated = 0;
+    let orderUpdated = 0;
 
-if (purpose === 'addfund') {
-  [orderUpdated] = await walletOrderModel.update(
-    { status: 'PROCESSING' },
-    {
-      where: {
-        id: finalOrderId,
-        status: 'CREATED'
-      }
+    if (purpose === 'addfund') {
+      orderUpdated = await walletOrderModel.update(
+        { status: 'PROCESSING' },
+        {
+          where: {
+            id: finalOrderId,
+            status: 'CREATED'
+          }
+        }
+      );
+    } else {
+      orderUpdated = await Order.update(
+        { status: 'PROCESSING' },
+        {
+          where: {
+            id: finalOrderId,
+            status: 'CREATED'
+          }
+        }
+      );
     }
-  );
-} else {
-  [orderUpdated] = await Order.update(
-    { status: 'PROCESSING' },
-    {
-      where: {
-        id: finalOrderId,
-        status: 'CREATED'
-      }
+    console.log('Order update result:', orderUpdated);
+    const affectedOrderRows = Array.isArray(orderUpdated) ? orderUpdated[0] : orderUpdated;
+
+    if (affectedOrderRows === 0) {
+      console.log('Order already moved:', finalOrderId);
+      return res.send(successHTML());
     }
-  );
-}
 
-if (orderUpdated === 0) {
-  console.log('Order already moved:', finalOrderId);
-  return res.send(successHTML());
-}
-
+    console.log('step 6.5 is reached');
 /* --------------------------------------------------
    6.5 FIRE & FORGET ASYNC WORK 🚀
 -------------------------------------------------- */
@@ -931,24 +914,121 @@ setImmediate(async () => {
   try {
     console.log('Async processing started for:', transactionId);
 
+    /* =========================
+       ADD FUND FLOW
+    ========================= */
     if (purpose === 'addfund') {
-      await walletController.addFund({
-        paymentTransactionId: paymentRecord.id,
-        userId: paymentRecord.userId,
-        amount: paymentRecord.amount
+      const walletOrder = await walletOrderModel.findOne({
+        where: { id: finalOrderId }
       });
-    } else {
-      await rechargeService.processRecharge({
-        orderId: finalOrderId,
-        paymentId: paymentRecord.id
+
+      if (!walletOrder) {
+        console.error('WalletOrder not found:', finalOrderId);
+        return;
+      }
+
+      // Idempotency guard
+      if (walletOrder.status !== 'PROCESSING') {
+        console.log('WalletOrder already processed:', finalOrderId);
+        return;
+      }
+
+      const addFundResponse = await walletController.addFund({
+        userId: walletOrder.userId,
+        amount: walletOrder.amount,
+        paymentTransactionId: paymentRecord.id
       });
+
+      await walletOrderModel.update(
+        {
+          status: addFundResponse?.statuscode === 1 ? 'SUCCESS' : 'FAILED'
+        },
+        {
+          where: {
+            id: finalOrderId,
+            status: 'PROCESSING'
+          }
+        }
+      );
+
+      console.log('Add fund completed:', finalOrderId);
     }
 
-    console.log('Async processing completed:', transactionId);
+    /* =========================
+       RECHARGE FLOW
+    ========================= */
+    else {
+      const order = await Order.findOne({
+        where: { id: finalOrderId }
+      });
+
+      if (!order) {
+        console.error('Order not found:', finalOrderId);
+        return;
+      }
+
+      // Idempotency guard
+      if (order.status !== 'PROCESSING') {
+        console.log('Recharge already processed:', finalOrderId);
+        return;
+      }
+
+      // 🔁 SAME PAYLOAD AS YOUR OLD CODE
+      const apiDataForRecharge = {
+        ezytm_circle_code: order.circle,
+        ezytm_operator_code: order.operator,
+        customer_number: order.serviceRef,
+        amount: order.amount,
+        paymentTransactionId: paymentRecord.id,
+        subCategoryId: order.serviceType,
+        transactionType: 'cash',
+        status: 'pending',
+        rechargeType: order.operatorType,
+        discountedAmount: paymentRecord.amount,
+        userId: order.userId,
+        finalAmount: paymentRecord.amount
+      };
+
+      let rechargeResponse;
+      try {
+        rechargeResponse = await axios.post(
+          `${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`,
+          apiDataForRecharge
+        );
+      } catch (apiErr) {
+        console.error('Recharge API error:', finalOrderId, apiErr);
+        return; // keep PROCESSING → retry later
+      }
+
+      const finalStatus =
+        rechargeResponse?.data?.statuscode === 1
+          ? 'SUCCESS'
+          : rechargeResponse?.data?.statuscode === 0
+          ? 'FAILED'
+          : 'PENDING';
+
+      await Order.update(
+        {
+          status: finalStatus
+        },
+        {
+          where: {
+            id: finalOrderId,
+            status: 'PROCESSING'
+          }
+        }
+      );
+      console.log('Recharge completed:', finalOrderId, finalStatus);
+    }
+
   } catch (err) {
-    console.error('Async failed', {transactionId,orderId: finalOrderId,err});
+    console.error('Async failed', {
+      transactionId,
+      orderId: finalOrderId,
+      err
+    });
     // ❗ DO NOT throw
-    // Let retry cron handle this
+    // Retry cron will handle unfinished PROCESSING orders
   }
 });
 
@@ -956,7 +1036,6 @@ setImmediate(async () => {
        7. RESPOND TO GATEWAY FAST 🚀
     -------------------------------------------------- */
     return res.send(successHTML());
-
   } catch (error) {
     console.error('Vegaah callback error:', error);
     return res.status(500).send('ERROR');
