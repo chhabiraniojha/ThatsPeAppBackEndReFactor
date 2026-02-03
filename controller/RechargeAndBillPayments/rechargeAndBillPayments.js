@@ -375,6 +375,7 @@ const { processRecharge } = require('../../services/rechargeOrchestrator.service
  */
 exports.rechargeAndBillPayments = async (req, res) => {
   try {
+    console.log('Recharge controller hit');
     const {
       ezytm_circle_code,
       ezytm_operator_code,
@@ -424,23 +425,27 @@ exports.rechargeAndBillPayments = async (req, res) => {
 
     /* --------------------------------------------------
        2. CASH PAYMENT VALIDATION (READ ONLY)
-       isUsed is handled in STEP-1
+       isUsed is handling idempotency
     -------------------------------------------------- */
     if (transactionType === 'cash') {
-      const payment = await paymentModel.findOne({
-        where: {
-          id: paymentTransactionId,
-          userId,
-          status: 'SUCCESS',
-          isUsed: true
+      const paymentUpdated = await paymentModel.update(
+        { isUsed: true },
+        {
+          where: {
+            id: paymentTransactionId,
+            userId,
+            status: 'SUCCESS',
+            isUsed: false
+          }
         }
-      });
-
-      if (!payment) {
+      );
+      const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
+      console.log('Affected payment rows:', affectedPaymentRows);
+      if (affectedPaymentRows === 0) {
         return res.status(200).json({
           success: false,
           statuscode: 0,
-          message: 'Payment not verified'
+          message: 'Payment already used or invalid'
         });
       }
     }

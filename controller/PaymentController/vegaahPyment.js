@@ -967,7 +967,7 @@ setImmediate(async () => {
         console.error('Order not found:', finalOrderId);
         return;
       }
-
+      // bypass for testing-----
       // Idempotency guard
       if (order.status !== 'PROCESSING') {
         console.log('Recharge already processed:', finalOrderId);
