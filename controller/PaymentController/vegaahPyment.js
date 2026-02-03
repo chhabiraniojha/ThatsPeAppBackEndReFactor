@@ -473,7 +473,7 @@ exports.payRequest = async (req, res) => {
 //     return res.status(500).json({ message: 'Internal Server Error', success: false, statuscode: 0, error: error });
 //   }
 // };
-
+// previous version of vegaahReceipt m 
 // exports.vegaahReceipt = async (req, res) => {
 //   try {
 //     console.log('Query:', req.query);
@@ -853,6 +853,7 @@ exports.vegaahReceipt = async (req, res) => {
 
     const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
     console.log('Affected payment rows:', affectedPaymentRows);
+    // bypassing these for testing-----
     if (affectedPaymentRows === 0) {
       return res.send(successHTML());
     }
@@ -900,7 +901,7 @@ exports.vegaahReceipt = async (req, res) => {
     }
     console.log('Order update result:', orderUpdated);
     const affectedOrderRows = Array.isArray(orderUpdated) ? orderUpdated[0] : orderUpdated;
-
+    // bypassing these for testing-----later remove it
     if (affectedOrderRows === 0) {
       console.log('Order already moved:', finalOrderId);
       return res.send(successHTML());
@@ -982,7 +983,6 @@ setImmediate(async () => {
         paymentTransactionId: paymentRecord.id,
         subCategoryId: order.serviceType,
         transactionType: 'cash',
-        status: 'pending',
         rechargeType: order.operatorType,
         discountedAmount: paymentRecord.amount,
         userId: order.userId,
@@ -995,7 +995,7 @@ setImmediate(async () => {
           `${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`,
           apiDataForRecharge
         );
-        console.log(rechargeResponse)
+        // console.log(rechargeResponse)
       } catch (apiErr) {
         console.error('Recharge API error:', finalOrderId, apiErr);
         return; // keep PROCESSING → retry later

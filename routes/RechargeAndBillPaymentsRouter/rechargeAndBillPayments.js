@@ -5,7 +5,7 @@ const Authenticate = require('../../middelWare/auth')
 const router = express.Router()
 
 
-router.post('/recharge-and-billpayments',rchargeAndBillPayments.rchargeAndBillPayments)
+router.post('/recharge-and-billpayments',rchargeAndBillPayments.rechargeAndBillPayments)
  
 
 

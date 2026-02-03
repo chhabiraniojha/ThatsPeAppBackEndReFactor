@@ -62,7 +62,7 @@ const RechargeAndBillPayTransaction = sequelize.define("AllTransactions", {
     allowNull: false,
   },
   status: {
-    type: DataTypes.ENUM("success", "pending", "failed"),
+    type: DataTypes.ENUM('CREATED', 'PROCESSING', 'SUCCESS', 'FAILED', 'PENDING'),
     allowNull: false,
   },
   refundStatus: {
