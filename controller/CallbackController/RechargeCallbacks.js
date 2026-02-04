@@ -17,15 +17,15 @@ exports.a1RechargeCallback = async (req, res) => {
         }
       );
       const allTransactionRecord = await AllTransactionsModel.findByPk(txid);
-      console.log('All Transaction Record:', allTransactionRecord.dataValues);
+    //   console.log('All Transaction Record:', allTransactionRecord.dataValues);
 
       const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
-      console.log('Payment Record:', PaymentRecord?.dataValues);
+    //   console.log('Payment Record:', PaymentRecord?.dataValues);
       if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
 
         const updateOrderStatus = await OrderModel.update({ status: 'FAILED' }, { where: { id: PaymentRecord.dataValues.orderId } });
 
-        console.log('Order Status Updated:', updateOrderStatus);
+        // console.log('Order Status Updated:', updateOrderStatus);
       }
 
       const upadateTransationStatus = await axios.post(
@@ -36,11 +36,11 @@ exports.a1RechargeCallback = async (req, res) => {
         }
       );
 
-      console.log('Transaction marked -------------------------:', updateTransationStatus);
+    //   console.log('Transaction marked -------------------------:', updateTransationStatus);
       let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
         allTransactionId: txid
       });
-      console.log(refdundData);
+    //   console.log(refdundData);
       return;
     } else if (status == 'Success') {
       const updateTransationStatus = await axios.post(
@@ -52,15 +52,15 @@ exports.a1RechargeCallback = async (req, res) => {
       );
 
       const allTransactionRecord = await AllTransactionsModel.findByPk(txid);
-      console.log('All Transaction Record:', allTransactionRecord.dataValues);
+    //   console.log('All Transaction Record:', allTransactionRecord.dataValues);
 
       const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
-      console.log('Payment Record:', PaymentRecord?.dataValues);
+    //   console.log('Payment Record:', PaymentRecord?.dataValues);
       if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
         
         const updateOrderStatus = await OrderModel.update({ status: 'SUCCESS' }, { where: { id: PaymentRecord.dataValues.orderId } });
 
-        console.log('Order Status Updated:', updateOrderStatus);
+        // console.log('Order Status Updated:', updateOrderStatus);
       }
 
       //order update code here if required
