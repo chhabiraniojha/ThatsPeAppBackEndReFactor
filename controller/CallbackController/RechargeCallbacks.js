@@ -1,96 +1,117 @@
-const axios = require('axios')
-const { log } = require('../../util/logData')
+const axios = require('axios');
+const { log } = require('../../util/logData');
+const PaymentModel = require('../../models/PaymentModel/payment');
+const AllTransactionsModel = require('../../models/RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
+const OrderModel = require('../../models/OrderModel/order');
 exports.a1RechargeCallback = async (req, res) => {
-    console.log("A1 Recharge Callback Hit", req.query);
+  console.log('A1 Recharge Callback Hit', req.query);
 
-    const { txid, status, opid } = req.query
-    try {
-        if (status == "Failure") {
-            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                rechargeTransactionId: txid,
-                apiResponse: "FAILURE"
-            })
+  const { txid, status, opid } = req.query;
+  try {
+    if (status == 'Failure') {
+      //   const updateTransationStatus = await axios.post(
+      //     `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+      //     {
+      //       rechargeTransactionId: txid,
+      //       apiResponse: 'FAILURE'
+      //     }
+      //   );
+      const allTransactionRecord = await AllTransactionsModel.findByPk(txid);
+      console.log('All Transaction Record:', allTransactionRecord.dataValues);
 
-            console.log("Transaction marked -------------------------:", updateTransationStatus);
-            let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
-                allTransactionId:txid
-            })
-            console.log(refdundData)
-            return  
-        
+      const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
+      console.log('Payment Record:', PaymentRecord?.dataValues);
+      if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
+        const updateOrderStatus = await OrderModel.update({ status: 'FAILED' }, { where: { id: PaymentRecord.dataValues.orderId } });
+        console.log('Order Status Updated:', updateOrderStatus);
+      }
+      return;
+      const upadateTransationStatus = await axios.post(
+        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+        {
+          rechargeTransactionId: txid,
+          apiResponse: 'FAILURE'
         }
-        else if (status == "Success") {
-            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                rechargeTransactionId: txid,
-                apiResponse: "SUCCESS"
-            })
-            return  
-        }
+      );
 
-    } catch (error) {
-        
-        return  
+      console.log('Transaction marked -------------------------:', updateTransationStatus);
+      let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
+        allTransactionId: txid
+      });
+      console.log(refdundData);
+      return;
+    } else if (status == 'Success') {
+      const updateTransationStatus = await axios.post(
+        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+        {
+          rechargeTransactionId: txid,
+          apiResponse: 'SUCCESS'
+        }
+      );
+      //order update code here if required
+      return;
     }
-}
+  } catch (error) {
+    return;
+  }
+};
 exports.roboticsExchangeCallback = async (req, res) => {
-
-    const { txnid, status, operatorid } = req.query
-    try {
-        if (status == 3) {
-            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                rechargeTransactionId: txnid,
-                apiResponse: "FAILURE"
-            })
-            let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
-                allTransactionId:txnid
-            })
-            console.log(refdundData)
-            return  res.status(200).json({ message: "Transaction updated", })
-
-        
+  const { txnid, status, operatorid } = req.query;
+  try {
+    if (status == 3) {
+      const updateTransationStatus = await axios.post(
+        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+        {
+          rechargeTransactionId: txnid,
+          apiResponse: 'FAILURE'
         }
-        else if (status == 1) {
-            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                rechargeTransactionId: txnid,
-                apiResponse: "SUCCESS"
-            })
-            return  res.status(200).json({ message: "Transaction updated", })
-
+      );
+      let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
+        allTransactionId: txnid
+      });
+      console.log(refdundData);
+      return res.status(200).json({ message: 'Transaction updated' });
+    } else if (status == 1) {
+      const updateTransationStatus = await axios.post(
+        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+        {
+          rechargeTransactionId: txnid,
+          apiResponse: 'SUCCESS'
         }
-
-    } catch (error) {
-        
-        return  
+      );
+      return res.status(200).json({ message: 'Transaction updated' });
     }
-}
+  } catch (error) {
+    return;
+  }
+};
 exports.rechargeExchangeCallback = async (req, res) => {
-
-    const { yourtransid, status, opid	 } = req.query
-    try {
-        if (status == "FAIL") {
-            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                rechargeTransactionId: yourtransid,
-                apiResponse: "FAILURE"
-            })
-            let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
-                allTransactionId:yourtransid
-            })
-            console.log(refdundData)
-            return  res.status(200).json({ message: "Transaction updated", })
-
-        
+  const { yourtransid, status, opid } = req.query;
+  try {
+    if (status == 'FAIL') {
+      const updateTransationStatus = await axios.post(
+        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+        {
+          rechargeTransactionId: yourtransid,
+          apiResponse: 'FAILURE'
         }
-        else if (status == "SUCCESS") {
-            const updateTransationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`, {
-                rechargeTransactionId: yourtransid,
-                apiResponse: "SUCCESS"
-            })
-            return  res.status(200).json({ message: "Transaction updated", })
-
+      );
+      let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
+        allTransactionId: yourtransid
+      });
+      console.log(refdundData);
+      return res.status(200).json({ message: 'Transaction updated' });
+    } else if (status == 'SUCCESS') {
+      const updateTransationStatus = await axios.post(
+        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+        {
+          rechargeTransactionId: yourtransid,
+          apiResponse: 'SUCCESS'
         }
-
-    } catch (error) {
-        
-        return  
+      );
+      return res.status(200).json({ message: 'Transaction updated' });
     }
-}
+  } catch (error) {
+    return;
+  }
+};
