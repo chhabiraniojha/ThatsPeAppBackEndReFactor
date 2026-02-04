@@ -9,13 +9,13 @@ exports.a1RechargeCallback = async (req, res) => {
   const { txid, status, opid } = req.query;
   try {
     if (status == 'Failure') {
-      //   const updateTransationStatus = await axios.post(
-      //     `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
-      //     {
-      //       rechargeTransactionId: txid,
-      //       apiResponse: 'FAILURE'
-      //     }
-      //   );
+      const updateTransationStatus = await axios.post(
+        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+        {
+          rechargeTransactionId: txid,
+          apiResponse: 'FAILURE'
+        }
+      );
       const allTransactionRecord = await AllTransactionsModel.findByPk(txid);
       console.log('All Transaction Record:', allTransactionRecord.dataValues);
 
@@ -25,7 +25,7 @@ exports.a1RechargeCallback = async (req, res) => {
         const updateOrderStatus = await OrderModel.update({ status: 'FAILED' }, { where: { id: PaymentRecord.dataValues.orderId } });
         console.log('Order Status Updated:', updateOrderStatus);
       }
-      return;
+
       const upadateTransationStatus = await axios.post(
         `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
         {
