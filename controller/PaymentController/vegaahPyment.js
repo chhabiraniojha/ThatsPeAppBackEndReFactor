@@ -1,5 +1,5 @@
 const { default: axios } = require('axios');
-const sequelize = require('../../config/database');
+const sequelize = require('../../util/db_connect');
 const crypto = require('crypto');
 const Order = require('../../models/OrderModel/order');
 const Payment = require('../../models/PaymentModel/payment');
