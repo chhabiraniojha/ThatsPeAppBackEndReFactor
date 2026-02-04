@@ -854,9 +854,9 @@ exports.vegaahReceipt = async (req, res) => {
     const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
     console.log('Affected payment rows:', affectedPaymentRows);
     // bypassing these for testing-----
-    if (affectedPaymentRows === 0) {
-      return res.send(successHTML());
-    }
+    // if (affectedPaymentRows === 0) {
+    //   return res.send(successHTML());
+    // }
 
     /* --------------------------------------------------
        5. FETCH PAYMENT (SAFE NOW)
@@ -902,10 +902,10 @@ exports.vegaahReceipt = async (req, res) => {
     console.log('Order update result:', orderUpdated);
     const affectedOrderRows = Array.isArray(orderUpdated) ? orderUpdated[0] : orderUpdated;
     // bypassing these for testing-----later remove it
-    if (affectedOrderRows === 0) {
-      console.log('Order already moved:', finalOrderId);
-      return res.send(successHTML());
-    }
+    // if (affectedOrderRows === 0) {
+    //   console.log('Order already moved:', finalOrderId);
+    //   return res.send(successHTML());
+    // }
 
     console.log('step 6.5 is reached');
 /* --------------------------------------------------
