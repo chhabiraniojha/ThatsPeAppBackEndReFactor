@@ -52,6 +52,8 @@ exports.payRequest = async (req, res) => {
     discountedAmount,
     purpose
   } = req.body;
+
+  const t = await sequelize.transaction();
   try {
     const clientIp = requestIp.getClientIp(req);
     const user = req.user;
@@ -129,31 +131,37 @@ exports.payRequest = async (req, res) => {
     // order initiate
     let orderData;
     if (purpose == 'recharge') {
-      orderData = await Order.create({
-        id: orderId,
-        userId: userId,
-        serviceType: subCategoryId,
-        serviceRef: customer_number,
-        operatorType: rechargeType,
-        operator: ezytm_operator_code,
-        circle: ezytm_circle_code,
-        amount: amount,
-        status: 'CREATED'
-      });
+      orderData = await Order.create(
+        {
+          id: orderId,
+          userId: userId,
+          serviceType: subCategoryId,
+          serviceRef: customer_number,
+          operatorType: rechargeType,
+          operator: ezytm_operator_code,
+          circle: ezytm_circle_code,
+          amount: amount,
+          status: 'CREATED'
+        },
+        { transaction: t }
+      );
     } else if (purpose == 'addfund') {
       const wallet = await walletModel.findOne({ where: { userId: userId } });
       if (!wallet) {
         return res.status(200).json({ message: 'No wallet found for user', success: false, statuscode: 0 });
       }
       // console.log('WALLET FOUND FOR USER:', wallet?.dataValues?.id);
-      orderData = await walletOrderModel.create({
-        id: walletOrderId,
-        userId: userId,
-        walletId: wallet?.dataValues?.id,
-        amount: amount,
-        walletAction: 'ADD',
-        status: 'CREATED'
-      });
+      orderData = await walletOrderModel.create(
+        {
+          id: walletOrderId,
+          userId: userId,
+          walletId: wallet?.dataValues?.id,
+          amount: amount,
+          walletAction: 'ADD',
+          status: 'CREATED'
+        },
+        { transaction: t }
+      );
     }
 
     // console.log('ORDER DATA CREATED:', orderData);
@@ -163,7 +171,7 @@ exports.payRequest = async (req, res) => {
       trackId: purpose == 'recharge' ? orderId : walletOrderId,
       terminalId: process.env.VEGAH_TERMINAL_ID,
       password: process.env.VEGAH_PASSWORD,
-      amount: '01.00', // it  will be change later
+      amount: purpose == 'recharge' ? finalAmount : amount, // it  will be change later
       currency: 'INR'
     };
     const secretKey = process.env.VEGAH_SECRET_KEY;
@@ -191,11 +199,11 @@ exports.payRequest = async (req, res) => {
       terminalId: process.env.VEGAH_TERMINAL_ID,
       password: process.env.VEGAH_PASSWORD,
       signature: signature,
-      amount: '01.00',
+      amount:  purpose == 'recharge' ? finalAmount : amount,
       currency: 'INR',
       paymentType: '1',
       customer: {
-        customerEmail: 'sudhanshuojha7234@gmail.com',
+        customerEmail: user.email, // it  will be change later
         billingAddressCountry: 'IN'
       }
     };
@@ -205,44 +213,54 @@ exports.payRequest = async (req, res) => {
       payRequestRequiredData
     );
     // console.log('PAY REQUEST RESPONSE:--->', payRequestResponse.data);
-    // initiate payment table entry
+    // --------------------------- initiate payment table entry  --------------------
     const paymentId = await UIDGenerator();
     let paymentData;
     if (purpose == 'recharge') {
-      paymentData = await Payment.create({
-        id: paymentId,
-        orderId: orderId,
-        userId: userId,
-        gateway: 'VEGAH',
-        paymentMode: 'UPI',
-        gatewayTransactionId: payRequestResponse?.data?.transactionId,
-        amount: finalAmount,
-        status: 'INITIATED',
-        purpose: purpose,
-        responseCode: payRequestResponse?.data?.responseCode,
-        rawCallback: payRequestResponse.data
-      });
+      paymentData = await Payment.create(
+        {
+          id: paymentId,
+          orderId: orderId,
+          userId: userId,
+          gateway: 'VEGAH',
+          paymentMode: 'UPI',
+          gatewayTransactionId: payRequestResponse?.data?.transactionId,
+          amount: finalAmount,
+          status: 'INITIATED',
+          purpose: purpose,
+          responseCode: payRequestResponse?.data?.responseCode,
+          rawCallback: payRequestResponse.data
+        },
+        { transaction: t }
+      );
     } else if (purpose == 'addfund') {
-      paymentData = await Payment.create({
-        id: paymentId,
-        walletOrderId: walletOrderId,
-        userId: userId,
-        gateway: 'VEGAH',
-        paymentMode: 'UPI',
-        gatewayTransactionId: payRequestResponse?.data?.transactionId,
-        amount: amount,
-        status: 'INITIATED',
-        purpose: purpose,
-        responseCode: payRequestResponse?.data?.responseCode,
-        rawCallback: payRequestResponse.data
-      });
+      paymentData = await Payment.create(
+        {
+          id: paymentId,
+          walletOrderId: walletOrderId,
+          userId: userId,
+          gateway: 'VEGAH',
+          paymentMode: 'UPI',
+          gatewayTransactionId: payRequestResponse?.data?.transactionId,
+          amount: amount,
+          status: 'INITIATED',
+          purpose: purpose,
+          responseCode: payRequestResponse?.data?.responseCode,
+          rawCallback: payRequestResponse.data
+        },
+        { transaction: t }
+      );
     }
-
+    await t.commit();
     // console.log('PAYMENT DATA CREATED:', paymentData);
 
     let linkurl = payRequestResponse?.data?.paymentLink?.linkUrl + payRequestResponse?.data?.transactionId;
     return res.status(200).json({ linkurl, paymentId: payRequestResponse?.data?.transactionId });
-  } catch (error) {}
+  } catch (error) {
+    await t.rollback();
+    console.error(error);
+    return res.status(500).json({ success: false, message: 'Payment initiation failed' });
+  }
 };
 
 // exports.vegaahCallback = async (req, res) => {
@@ -473,7 +491,7 @@ exports.payRequest = async (req, res) => {
 //     return res.status(500).json({ message: 'Internal Server Error', success: false, statuscode: 0, error: error });
 //   }
 // };
-// previous version of vegaahReceipt m 
+// previous version of vegaahReceipt m
 // exports.vegaahReceipt = async (req, res) => {
 //   try {
 //     console.log('Query:', req.query);
@@ -842,12 +860,12 @@ exports.vegaahReceipt = async (req, res) => {
 
     if (!existingPayment) {
       console.error('Payment not found:', transactionId);
-      return res.send(successHTML());;
+      return res.send(successHTML());
     }
 
     if (existingPayment.amount !== amountDetails?.amount) {
       console.error('Amount mismatch:', transactionId, existingPayment.amount, amountDetails?.amount);
-      return res.send(successHTML());;
+      return res.send(successHTML());
     }
 
     /* --------------------------------------------------
@@ -926,130 +944,121 @@ exports.vegaahReceipt = async (req, res) => {
     }
 
     console.log('step 6.5 is reached');
-/* --------------------------------------------------
+    /* --------------------------------------------------
    6.5 FIRE & FORGET ASYNC WORK 🚀
 -------------------------------------------------- */
-setImmediate(async () => {
-  try {
-    console.log('Async processing started for:', transactionId);
+    setImmediate(async () => {
+      try {
+        console.log('Async processing started for:', transactionId);
 
-    /* =========================
+        /* =========================
        ADD FUND FLOW
     ========================= */
-    if (purpose === 'addfund') {
-      const walletOrder = await walletOrderModel.findOne({
-        where: { id: finalOrderId }
-      });
+        if (purpose === 'addfund') {
+          const walletOrder = await walletOrderModel.findOne({
+            where: { id: finalOrderId }
+          });
 
-      if (!walletOrder) {
-        console.error('WalletOrder not found:', finalOrderId);
-        return;
-      }
-
-      // Idempotency guard
-      if (walletOrder.status !== 'PROCESSING') {
-        console.log('WalletOrder already processed:', finalOrderId);
-        return;
-      }
-
-      const addFundResponse = await walletController.addFund({
-        userId: walletOrder.userId,
-        amount: walletOrder.amount,
-        paymentTransactionId: paymentRecord.id
-      });
-
-      await walletOrderModel.update(
-        {
-          status: addFundResponse?.statuscode === 1 ? 'SUCCESS' : 'FAILED'
-        },
-        {
-          where: {
-            id: finalOrderId,
-            status: 'PROCESSING'
+          if (!walletOrder) {
+            console.error('WalletOrder not found:', finalOrderId);
+            return;
           }
-        }
-      );
 
-      console.log('Add fund completed:', finalOrderId);
-    }
+          // Idempotency guard
+          if (walletOrder.status !== 'PROCESSING') {
+            console.log('WalletOrder already processed:', finalOrderId);
+            return;
+          }
 
-    /* =========================
+          const addFundResponse = await walletController.addFund({
+            userId: walletOrder.userId,
+            amount: walletOrder.amount,
+            paymentTransactionId: paymentRecord.id
+          });
+
+          await walletOrderModel.update(
+            {
+              status: addFundResponse?.statuscode === 1 ? 'SUCCESS' : 'FAILED'
+            },
+            {
+              where: {
+                id: finalOrderId,
+                status: 'PROCESSING'
+              }
+            }
+          );
+
+          console.log('Add fund completed:', finalOrderId);
+        } else {
+
+        /* =========================
        RECHARGE FLOW
     ========================= */
-    else {
-      const order = await Order.findOne({
-        where: { id: finalOrderId }
-      });
+          const order = await Order.findOne({
+            where: { id: finalOrderId }
+          });
 
-      if (!order) {
-        console.error('Order not found:', finalOrderId);
-        return;
-      }
-      // bypass for testing-----
-      // Idempotency guard
-      if (order.status !== 'PROCESSING') {
-        console.log('Recharge already processed:', finalOrderId);
-        return;
-      }
-
-      // 🔁 SAME PAYLOAD AS YOUR OLD CODE
-      const apiDataForRecharge = {
-        ezytm_circle_code: order.circle,
-        ezytm_operator_code: order.operator,
-        customer_number: order.serviceRef,
-        amount: order.amount,
-        paymentTransactionId: paymentRecord.id,
-        subCategoryId: order.serviceType,
-        transactionType: 'cash',
-        rechargeType: order.operatorType,
-        discountedAmount: paymentRecord.amount,
-        userId: order.userId,
-        finalAmount: paymentRecord.amount
-      };
-
-      let rechargeResponse;
-      try {
-        rechargeResponse = await axios.post(
-          `${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`,
-          apiDataForRecharge
-        );
-        // console.log(rechargeResponse)
-      } catch (apiErr) {
-        console.error('Recharge API error:', finalOrderId, apiErr);
-        return; // keep PROCESSING → retry later
-      }
-
-      const finalStatus =
-        rechargeResponse?.data?.statuscode === 1
-          ? 'SUCCESS'
-          : rechargeResponse?.data?.statuscode === 0
-          ? 'FAILED'
-          : 'PENDING';
-
-      await Order.update(
-        {
-          status: finalStatus
-        },
-        {
-          where: {
-            id: finalOrderId,
-            status: 'PROCESSING'
+          if (!order) {
+            console.error('Order not found:', finalOrderId);
+            return;
           }
-        }
-      );
-      console.log('Recharge completed:', finalOrderId, finalStatus);
-    }
+          // bypass for testing-----
+          // Idempotency guard
+          if (order.status !== 'PROCESSING') {
+            console.log('Recharge already processed:', finalOrderId);
+            return;
+          }
 
-  } catch (err) {
-    console.error('Async failed', {
-      transactionId,
-      orderId: finalOrderId,
-      err
+          // 🔁 SAME PAYLOAD AS YOUR OLD CODE
+          const apiDataForRecharge = {
+            ezytm_circle_code: order.circle,
+            ezytm_operator_code: order.operator,
+            customer_number: order.serviceRef,
+            amount: order.amount,
+            paymentTransactionId: paymentRecord.id,
+            subCategoryId: order.serviceType,
+            transactionType: 'cash',
+            rechargeType: order.operatorType,
+            discountedAmount: paymentRecord.amount,
+            userId: order.userId,
+            finalAmount: paymentRecord.amount
+          };
+
+          let rechargeResponse;
+          try {
+            rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`, apiDataForRecharge);
+            // console.log(rechargeResponse)
+          } catch (apiErr) {
+            console.error('Recharge API error:', finalOrderId, apiErr);
+            return; // keep PROCESSING → retry later
+          }
+
+          const finalStatus =
+            rechargeResponse?.data?.statuscode === 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode === 0 ? 'FAILED' : 'PENDING';
+
+          await Order.update(
+            {
+              status: finalStatus
+            },
+            {
+              where: {
+                id: finalOrderId,
+                status: 'PROCESSING'
+              }
+            }
+          );
+          console.log('Recharge completed:', finalOrderId, finalStatus);
+        }
+      } catch (err) {
+        console.error('Async failed', {
+          transactionId,
+          orderId: finalOrderId,
+          err
+        });
+        // ❗ DO NOT throw
+        // Retry cron will handle unfinished PROCESSING orders
+      }
     });
-    // ❗ DO NOT throw
-    // Retry cron will handle unfinished PROCESSING orders
-  }
-});
 
     /* -------------------------------------------------
        7. RESPOND TO GATEWAY FAST 🚀
