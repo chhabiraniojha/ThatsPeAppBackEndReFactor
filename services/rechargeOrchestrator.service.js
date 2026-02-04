@@ -83,20 +83,7 @@ async function processRecharge({
   }
 
   /* --------------------------------------------------
-     STEP 2: WALLET DEBIT (ONLY ONCE)
-  -------------------------------------------------- */
-  if (paymentTransactionType === 'wallet') {
-    await debitWalletForRecharge({
-      walletId,
-      amount: discountedAmount,
-      rechargeTransactionId: rechargeTransaction.id,
-      rechargeTypeId: subCategoryId,
-      paymentTransactionId: walletPaymentTransactionId
-    });
-  }
-
-  /* --------------------------------------------------
-     STEP 3: MARK PROCESSING
+     STEP 2: MARK PROCESSING
   -------------------------------------------------- */
   await updateRechargeTransactionStatus({
     rechargeTransactionId: rechargeTransaction.id,
@@ -104,7 +91,7 @@ async function processRecharge({
   });
 
   /* --------------------------------------------------
-     STEP 4: VENDOR MAP (EASYTM → VENDOR)
+     STEP 3: VENDOR MAP (EASYTM → VENDOR)
   -------------------------------------------------- */
   const vendorMap = [
     {
@@ -128,7 +115,7 @@ async function processRecharge({
   ];
 
   /* --------------------------------------------------
-     STEP 5: TRY VENDORS SEQUENTIALLY
+     STEP 4: TRY VENDORS SEQUENTIALLY
      (STOP ON SUCCESS OR PENDING)
   -------------------------------------------------- */
   let lastVendorName = null;
@@ -177,7 +164,7 @@ async function processRecharge({
   }
 
   /* --------------------------------------------------
-     STEP 6: FINAL FAILURE → REFUND
+     STEP 5: FINAL FAILURE → REFUND
   -------------------------------------------------- */
   await updateRechargeTransactionStatus({
     rechargeTransactionId: rechargeTransaction.id,

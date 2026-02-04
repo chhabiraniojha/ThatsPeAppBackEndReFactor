@@ -387,8 +387,7 @@ exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
       subCategoryId,
       transactionType, // 'cash' | 'wallet'
       rechargeType, // PREPAID | POSTPAID | DTH
-      userId,
-      walletId
+      userId
     } = req.body;
 
     /* --------------------------------------------------
@@ -409,13 +408,7 @@ exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
         message: 'Invalid request parameters'
       });
     }
-    if (transactionType === 'wallet' && !walletId) {
-      return res.status(200).json({
-        success: false,
-        statuscode: 0,
-        message: 'WalletId required for wallet recharge'
-      });
-    }
+
     if (Number(amount) <= 0) {
       return res.status(200).json({
         success: false,

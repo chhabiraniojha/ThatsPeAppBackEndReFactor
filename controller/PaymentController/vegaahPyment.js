@@ -832,6 +832,24 @@ exports.vegaahReceipt = async (req, res) => {
       return res.send(failureHTML());
     }
 
+    /*--------------------------------------------------
+       4)check payment record exists and compaire the fetchd db amount with vegaah callback amount
+    --------------------------------------------------*/
+
+    const existingPayment = await Payment.findOne({
+      where: { gatewayTransactionId: transactionId }
+    });
+
+    if (!existingPayment) {
+      console.error('Payment not found:', transactionId);
+      return res.send(successHTML());;
+    }
+
+    if (existingPayment.amount !== amountDetails?.amount) {
+      console.error('Amount mismatch:', transactionId, existingPayment.amount, amountDetails?.amount);
+      return res.send(successHTML());;
+    }
+
     /* --------------------------------------------------
        4. ATOMIC PAYMENT UPDATE (IDEMPOTENT)
     -------------------------------------------------- */
