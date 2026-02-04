@@ -22,7 +22,9 @@ exports.a1RechargeCallback = async (req, res) => {
       const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
       console.log('Payment Record:', PaymentRecord?.dataValues);
       if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
+
         const updateOrderStatus = await OrderModel.update({ status: 'FAILED' }, { where: { id: PaymentRecord.dataValues.orderId } });
+
         console.log('Order Status Updated:', updateOrderStatus);
       }
 
@@ -48,6 +50,19 @@ exports.a1RechargeCallback = async (req, res) => {
           apiResponse: 'SUCCESS'
         }
       );
+
+      const allTransactionRecord = await AllTransactionsModel.findByPk(txid);
+      console.log('All Transaction Record:', allTransactionRecord.dataValues);
+
+      const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
+      console.log('Payment Record:', PaymentRecord?.dataValues);
+      if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
+        
+        const updateOrderStatus = await OrderModel.update({ status: 'SUCCESS' }, { where: { id: PaymentRecord.dataValues.orderId } });
+
+        console.log('Order Status Updated:', updateOrderStatus);
+      }
+
       //order update code here if required
       return;
     }
