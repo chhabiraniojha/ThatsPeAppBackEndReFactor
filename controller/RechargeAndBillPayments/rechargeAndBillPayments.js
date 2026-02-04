@@ -488,7 +488,6 @@ exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
     -------------------------------------------------- */
     const orchestrationResult = await processRecharge({
       userId,
-      walletId,
       customerNo: customer_number,
       amount,
       discountedAmount: beDiscountedAmount,

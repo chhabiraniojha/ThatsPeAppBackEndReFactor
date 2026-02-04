@@ -17,7 +17,6 @@ const a1RechargeService = require('./recharge/a1Recharge');
 
 async function processRecharge({
   userId,
-  walletId,
   customerNo,
   amount,
   discountedAmount,
