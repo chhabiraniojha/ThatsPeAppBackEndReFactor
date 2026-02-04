@@ -17,7 +17,7 @@ exports.a1Recharge = async (data) => {
       'https://business.a1topup.com/recharge/api',
       { params: a1Params, timeout: 7000 }
     );
-
+    console.log('A1 Recharge Response:', response.data);
     const vendorStatus = String(
       response?.data?.Status || response?.data?.status || ''
     ).toUpperCase();
