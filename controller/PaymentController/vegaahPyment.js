@@ -47,7 +47,6 @@ exports.payRequest = async (req, res) => {
     customer_number,
     amount,
     subCategoryId,
-    transactionType,
     status,
     rechargeType,
     discountedAmount,
@@ -59,9 +58,6 @@ exports.payRequest = async (req, res) => {
     const clientIp = requestIp.getClientIp(req);
     const user = req.user;
     const userId = user.id;
-    // const paymentTransactionId = await UIDGenerator();
-    // const paymentInitiateLogId = await UIDGenerator();
-    const { transactionFor } = req.body;
     let finalAmount;
     if (!((purpose && purpose == 'recharge') || purpose == 'addfund')) {
       return res.status(200).json({
@@ -70,7 +66,7 @@ exports.payRequest = async (req, res) => {
         message: 'Missing Purpose '
       });
     }
-    if (purpose == 'recharge' && !(amount && customer_number && subCategoryId && userId && status)) {
+    if (purpose == 'recharge' && (!amount || !customer_number || !subCategoryId || !userId  || !ezytm_operator_code)) {
       return res.status(200).json({
         success: false,
         statusCode: 0,
@@ -78,11 +74,19 @@ exports.payRequest = async (req, res) => {
       });
     }
 
-    if (purpose == 'addfund' && !(amount && userId)) {
+    if (purpose == 'addfund' && (!amount || !userId)) {
       return res.status(200).json({
         success: false,
         statusCode: 0,
         message: 'Missing Walet Recharge Details '
+      });
+    }
+
+    if (amount < 0 || amount == 0 || discountedAmount < 0 || discountedAmount == 0) {
+      return res.status(200).json({
+        success: false,
+        statusCode: 0,
+        message: 'Amount or Discounted Amount is not valid'
       });
     }
     // Prepare the data for required in order table create --
@@ -90,6 +94,14 @@ exports.payRequest = async (req, res) => {
       const operatorData = await operatorModel.findOne({
         where: { ezytm_operator_code: ezytm_operator_code }
       });
+
+      if (!operatorData) {
+        return res.status(200).json({
+          success: false,
+          statusCode: 0,
+          message: 'Operator not found '
+        });
+      }
 
       const discountAmount = operatorData.discount;
       const discountType = operatorData.discount_type;
@@ -200,7 +212,7 @@ exports.payRequest = async (req, res) => {
       terminalId: process.env.VEGAH_TERMINAL_ID,
       password: process.env.VEGAH_PASSWORD,
       signature: signature,
-      amount:  purpose == 'recharge' ? finalAmount : amount,
+      amount: purpose == 'recharge' ? finalAmount : amount,
       currency: 'INR',
       paymentType: '1',
       customer: {
@@ -796,7 +808,7 @@ exports.vegaahReceipt = async (req, res) => {
     if (!req.body?.data) {
       return res.status(400).send('INVALID');
     }
-    console.log('Vegaah Receipt Payload:', req.body);
+    // console.log('Vegaah Receipt Payload:', req.body);
 
     let encryptedData = decodeURIComponent(req.body.data).replace('data=', '');
     const key = Buffer.from(secretKey, 'hex');
@@ -808,7 +820,7 @@ exports.vegaahReceipt = async (req, res) => {
     let decrypted = decipher.update(encryptedBuffer, undefined, 'utf8');
     decrypted += decipher.final('utf8');
     decrypted = JSON.parse(decrypted);
-    console.log('Decrypted Receipt Data:', decrypted);
+    // console.log('Decrypted Receipt Data:', decrypted);
 
     const { transactionId, responseCode, result, rrn, signature, amountDetails, orderDetails } = decrypted;
 
@@ -820,7 +832,7 @@ exports.vegaahReceipt = async (req, res) => {
     const generatedSignature = crypto.createHash('sha256').update(dataToHash).digest('hex');
 
     if (signature !== generatedSignature) {
-      console.error('Invalid signature:', transactionId);
+      // console.error('Invalid signature:', transactionId);
       return res.status(200).send('INVALID');
     }
 
@@ -828,7 +840,7 @@ exports.vegaahReceipt = async (req, res) => {
        3. BASIC VALIDATIONS
     -------------------------------------------------- */
     if (amountDetails?.amount !== amountDetails?.originalAmount) {
-      console.error('Amount mismatch:', transactionId);
+      // console.error('Amount mismatch:', transactionId);
       return res.status(200).send('INVALID');
     }
 
@@ -860,12 +872,12 @@ exports.vegaahReceipt = async (req, res) => {
     });
 
     if (!existingPayment) {
-      console.error('Payment not found:', transactionId);
+      // console.error('Payment not found:', transactionId);
       return res.send(successHTML());
     }
 
     if (existingPayment.amount !== amountDetails?.amount) {
-      console.error('Amount mismatch:', transactionId, existingPayment.amount, amountDetails?.amount);
+      // console.error('Amount mismatch:', transactionId, existingPayment.amount, amountDetails?.amount);
       return res.send(successHTML());
     }
 
@@ -886,10 +898,10 @@ exports.vegaahReceipt = async (req, res) => {
         }
       }
     );
-    console.log('Payment update result:', paymentUpdated);
+    // console.log('Payment update result:', paymentUpdated);
 
     const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
-    console.log('Affected payment rows:', affectedPaymentRows);
+    // console.log('Affected payment rows:', affectedPaymentRows);
     // bypassing these for testing-----
     if (affectedPaymentRows === 0) {
       return res.send(successHTML());
@@ -903,7 +915,7 @@ exports.vegaahReceipt = async (req, res) => {
     });
 
     if (!paymentRecord) {
-      console.error('Payment not found:', transactionId);
+      // console.error('Payment not found:', transactionId);
       return res.send(successHTML());
     }
 
@@ -936,21 +948,21 @@ exports.vegaahReceipt = async (req, res) => {
         }
       );
     }
-    console.log('Order update result:', orderUpdated);
+    // console.log('Order update result:', orderUpdated);
     const affectedOrderRows = Array.isArray(orderUpdated) ? orderUpdated[0] : orderUpdated;
     // bypassing these for testing-----later remove it
     if (affectedOrderRows === 0) {
-      console.log('Order already moved:', finalOrderId);
+      // console.log('Order already moved:', finalOrderId);
       return res.send(successHTML());
     }
 
-    console.log('step 6.5 is reached');
+    // console.log('step 6.5 is reached');
     /* --------------------------------------------------
    6.5 FIRE & FORGET ASYNC WORK 🚀
 -------------------------------------------------- */
     setImmediate(async () => {
       try {
-        console.log('Async processing started for:', transactionId);
+        // console.log('Async processing started for:', transactionId);
 
         /* =========================
        ADD FUND FLOW
@@ -961,13 +973,13 @@ exports.vegaahReceipt = async (req, res) => {
           });
 
           if (!walletOrder) {
-            console.error('WalletOrder not found:', finalOrderId);
+            // console.error('WalletOrder not found:', finalOrderId);
             return;
           }
 
           // Idempotency guard
           if (walletOrder.status !== 'PROCESSING') {
-            console.log('WalletOrder already processed:', finalOrderId);
+            // console.log('WalletOrder already processed:', finalOrderId);
             return;
           }
 
@@ -989,10 +1001,9 @@ exports.vegaahReceipt = async (req, res) => {
             }
           );
 
-          console.log('Add fund completed:', finalOrderId);
+          // console.log('Add fund completed:', finalOrderId);
         } else {
-
-        /* =========================
+          /* =========================
        RECHARGE FLOW
     ========================= */
           const order = await Order.findOne({
@@ -1000,13 +1011,13 @@ exports.vegaahReceipt = async (req, res) => {
           });
 
           if (!order) {
-            console.error('Order not found:', finalOrderId);
+            // console.error('Order not found:', finalOrderId);
             return;
           }
           // bypass for testing-----
           // Idempotency guard
           if (order.status !== 'PROCESSING') {
-            console.log('Recharge already processed:', finalOrderId);
+            // console.log('Recharge already processed:', finalOrderId);
             return;
           }
 
@@ -1030,7 +1041,7 @@ exports.vegaahReceipt = async (req, res) => {
             rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`, apiDataForRecharge);
             // console.log(rechargeResponse)
           } catch (apiErr) {
-            console.error('Recharge API error:', finalOrderId, apiErr);
+            // console.error('Recharge API error:', finalOrderId, apiErr);
             return; // keep PROCESSING → retry later
           }
 
@@ -1048,7 +1059,7 @@ exports.vegaahReceipt = async (req, res) => {
               }
             }
           );
-          console.log('Recharge completed:', finalOrderId, finalStatus);
+          // console.log('Recharge completed:', finalOrderId, finalStatus);
         }
       } catch (err) {
         console.error('Async failed', {
@@ -1066,7 +1077,7 @@ exports.vegaahReceipt = async (req, res) => {
     -------------------------------------------------- */
     return res.send(successHTML());
   } catch (error) {
-    console.error('Vegaah callback error:', error);
+    // console.error('Vegaah callback error:', error);
     return res.status(500).send('ERROR');
   }
 };

@@ -228,7 +228,7 @@ async function processRechargeForWallet({
       rechargeTypeId: subCategoryId,
     });
 
-    console.log("debitWalletForRecharge called--------",walletPaymentTransaction);
+    // console.log("debitWalletForRecharge called--------",walletPaymentTransaction);
   
   const rechargeTransaction = await createRechargeTransaction({
     userId,

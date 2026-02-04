@@ -376,7 +376,7 @@ const { processRecharge ,processRechargeForWallet} = require('../../services/rec
  */
 exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
   try {
-    console.log('Recharge controller hit');
+    // console.log('Recharge controller hit');
     const {
       ezytm_circle_code,
       ezytm_operator_code,
@@ -434,7 +434,7 @@ exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
         }
       );
       const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
-      console.log('Affected payment rows:', affectedPaymentRows);
+      // console.log('Affected payment rows:', affectedPaymentRows);
       if (affectedPaymentRows === 0) {
         return res.status(200).json({
           success: false,
@@ -530,7 +530,7 @@ exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
       rechargeTransactionId: orchestrationResult.rechargeTransactionId
     });
   } catch (error) {
-    console.error('STEP-4 ERROR:', error);
+    // console.error('STEP-4 ERROR:', error);
     return res.status(500).json({
       success: false,
       statuscode: 0,
@@ -540,7 +540,7 @@ exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
 };
 exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
   try {
-    console.log('Recharge controller hit');
+    // console.log('Recharge controller hit');
     const {
       ezytm_circle_code,
       ezytm_operator_code,
@@ -592,7 +592,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
         message: 'Invalid operator'
       });
     }
-    console.log("operatorData", operatorData);
+    // console.log("operatorData", operatorData);
     /* --------------------------------------------------
        2. FETCH OPERATOR (FOR DISCOUNT ONLY)
     -------------------------------------------------- */
@@ -610,7 +610,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
         });
       }
 
-      console.log("circleData", circleData);
+      // console.log("circleData", circleData);
     }
 
     /* --------------------------------------------------
@@ -627,7 +627,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
     }
 
     beDiscountedAmount = Math.ceil(beDiscountedAmount * 10) / 10;
-    console.log("beDiscountedAmount", beDiscountedAmount);  
+    // console.log("beDiscountedAmount", beDiscountedAmount);  
 
     if (Number(beDiscountedAmount) !== Number(discountedAmount)) {
       return res.status(200).json({
@@ -683,7 +683,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
       rechargeTransactionId: orchestrationResult.rechargeTransactionId
     });
   } catch (error) {
-    console.error('STEP-4 ERROR:', error);
+    // console.error('STEP-4 ERROR:', error);
     return res.status(500).json({
       success: false,
       statuscode: 0,

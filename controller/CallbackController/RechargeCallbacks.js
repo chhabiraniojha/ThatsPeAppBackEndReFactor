@@ -1,5 +1,7 @@
 const axios = require('axios')
+const { log } = require('../../util/logData')
 exports.a1RechargeCallback = async (req, res) => {
+    console.log("A1 Recharge Callback Hit", req.query);
 
     const { txid, status, opid } = req.query
     try {

@@ -191,7 +191,7 @@ exports.debitAmount = async ({ deductAmount, rechargeTypeId, purpose, userId }) 
 exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
   // const user = req.user
   // let { amount, paymentTransactionId, userId } = req.body
-  console.log('Add Fund Request Details:', { amount, paymentTransactionId, userId });
+  // console.log('Add Fund Request Details:', { amount, paymentTransactionId, userId });
   try {
     if (!amount || !paymentTransactionId) {
       return { message: 'Please Provied The Valied Details', success: false, statuscode: 0 };
@@ -220,7 +220,7 @@ exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
       return { message: 'Payment transaction not found', success: false, statuscode: 0 };
     }
 
-    console.log('Payment Transaction Details:', paymentTransaction?.dataValues?.id);
+    // console.log('Payment Transaction Details:', paymentTransaction?.dataValues?.id);
 
 
     // return { message: 'check new paymenttranscation ', success: false, statuscode: 0, paymentTransaction };
@@ -394,7 +394,7 @@ exports.addFund = async ({ amount, paymentTransactionId, userId }) => {
       transitionDate: response.data.walletUpdateResponse.updatedAt
     };
   } catch (error) {
-    console.log(error);
+    // console.log(error);
     return { message: 'Internal Server Error', success: false, error: error };
   }
 };
@@ -418,7 +418,7 @@ exports.refund = async (req, res) => {
     }
     // console.log(transactionDetails);
     const paymentTransactionType = transactionDetails.dataValues.paymentTransactionType;
-    console.log('paymentTransactionType--', paymentTransactionType);
+    // console.log('paymentTransactionType--', paymentTransactionType);
     let amount = 0;
     if (paymentTransactionType == 'cash') {
       const paymentTransactionDetails = await paymentModel.findOne({

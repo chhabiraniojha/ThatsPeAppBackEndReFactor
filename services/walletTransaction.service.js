@@ -33,7 +33,7 @@ async function debitWalletForRecharge({ userId, amount, rechargeTypeId = null })
       throw new Error('INVALID_DEDUCT_AMOUNT');
     }
 
-    if (Number(wallet.amount) < Number(amount)) {
+    if (Number(wallet.amount) < Number(amount) || Number(wallet.amount) === 0) {
       throw new Error('INSUFFICIENT_WALLET_BALANCE');
     }
     const subCategoryDetails = await SubCategory.findByPk(rechargeTypeId);
