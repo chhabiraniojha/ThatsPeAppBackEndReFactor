@@ -10,6 +10,8 @@ exports.a1RechargeCallback = async (req, res) => {
                 rechargeTransactionId: txid,
                 apiResponse: "FAILURE"
             })
+
+            console.log("Transaction marked -------------------------:", updateTransationStatus);
             let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
                 allTransactionId:txid
             })

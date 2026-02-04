@@ -42,33 +42,34 @@ exports.updateTransactionStatus = async (req, res) => {
     const { rechargeTransactionId, apiResponse, apiId } = req.body
     try {
         console.log("Update Transaction Status Request Body--- xxxxxxxxxxxxxxx :", req.body)
-        const apiData=await avelablleAPIsModel.findOne({ where: { name: apiId } })
-        if(!apiData){
-            return res.status(200).json({ message: "Invalid API ID", success: false });
-        }
+        // const apiData=await avelablleAPIsModel.findOne({ where: { name: apiId } })
+        // if(!apiData){
+        //     return res.status(200).json({ message: "Invalid API ID", success: false });
+        // }
+        //ENUM('CREATED', 'PROCESSING', 'SUCCESS', 'FAILED', 'PENDING')
         
         const rechargeTransaction = await rechargeAndBillPaymentTransationModel.findOne({ where: { id: rechargeTransactionId } })
-        if (rechargeTransaction == null) {
-            res.status(201).json({ message: "No transaction found", success: false })
+        if (!rechargeTransaction) {
+             return res.status(201).json({ message: "No transaction found", success: false })
         } else {
             if (apiResponse == "FAILURE") {     
                 console.log("Recharge failed due to some error-----------------------");
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'failed', apiTransactionId: apiData?.dataValues?.id })
-                res.status(202).json({ message: "Recharge failed due to some error", success: false, rechargeTransactionUpdate })
+                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'FAILED'   })
+              return  res.status(202).json({ message: "Recharge failed due to some error", success: false, rechargeTransactionUpdate })
             } 
             if(apiResponse == "PENDING") {
                 console.log("Recharge is pending-----------------------");
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'pending', apiTransactionId: apiData?.dataValues?.id })
-                res.status(200).json({ message: "Recharge Pending", success: false, rechargeTransactionUpdate })
+                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'PENDING'  })
+                return res.status(200).json({ message: "Recharge Pending", success: false, rechargeTransactionUpdate })
             }
              if(apiResponse == "SUCCESS") {
                 console.log("Recharge successful-----------------------");  
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'success', apiTransactionId: apiData?.dataValues?.id })
-                res.status(200).json({ message: "Recharge successful", success: true, rechargeTransactionUpdate })
+                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'SUCCESS'})
+               return  res.status(200).json({ message: "Recharge successful", success: true, rechargeTransactionUpdate })
             }
         }
     } catch (error) {
-        res.status(500).json({ message: "Internal Server Error", success: false ,error})
+       return res.status(500).json({ message: "Internal Server Error", success: false ,error})
     }
 }
 

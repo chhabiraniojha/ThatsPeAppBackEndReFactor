@@ -409,14 +409,14 @@ exports.refund = async (req, res) => {
     const transactionDetails = await allTransactionsModel.findOne({
       where: {
         id: allTransactionId,
-        status: 'failed',
+        status: 'FAILED',
         refundStatus: 0
       }
     });
     if (!transactionDetails) {
       return res.status(200).json({ message: 'Transaction details not found', success: false, statuscode: 0 });
     }
-    // console.log(transactionDetails);
+    // console.log(transactionDetails.dataValues);
     const paymentTransactionType = transactionDetails.dataValues.paymentTransactionType;
     // console.log('paymentTransactionType--', paymentTransactionType);
     let amount = 0;
@@ -445,7 +445,7 @@ exports.refund = async (req, res) => {
     });
 
     const startingBalance = getUserWallet.dataValues.amount;
-    console.log(startingBalance);
+    // console.log(startingBalance);
 
     if (initiateRefundTransaction.data.statuscode != 1) {
       const updateRefundTransaction = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet-transaction/update`, {
@@ -457,10 +457,10 @@ exports.refund = async (req, res) => {
       // console.log(updateRefundTransaction);
       return res.status(200).json({ message: 'Could not perform refund. Conatct support', success: false, statuscode: 0 });
     }
-    console.log('Initiate Refund Transaction:', startingBalance, amount);
+    // console.log('Initiate Refund Transaction:', startingBalance, amount);
     const endingBalance = Number(startingBalance) + Number(amount);
 
-    console.log('Ending Balance:', endingBalance);
+    // console.log('Ending Balance:', endingBalance);
 
     await getUserWallet.update({
       amount: endingBalance
@@ -479,7 +479,7 @@ exports.refund = async (req, res) => {
 
     return res.status(200).json({ message: 'Refund amount credited successfully', success: true, statuscode: 1 });
   } catch (error) {
-    console.log(error);
+    // console.log(error);
     return res.status(500).json({ message: 'Internal Server Error', success: false, error });
   }
 };
