@@ -992,7 +992,7 @@ setImmediate(async () => {
       let rechargeResponse;
       try {
         rechargeResponse = await axios.post(
-          `${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments`,
+          `${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`,
           apiDataForRecharge
         );
         // console.log(rechargeResponse)

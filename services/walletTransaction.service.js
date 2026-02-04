@@ -2,6 +2,7 @@ const sequelize = require('../util/db_connect');
 const Wallet = require('../models/WalletModels/WalletSchema/wallet');
 const WalletTransaction = require('../models/WalletModels/Wallet Transaction/walletTransaction');
 const RechargeTransaction = require('../models/RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
+const SubCategory = require('../models/SubCategoryModel/subCategory');
 const uid = require('../util/uidGenerator');
 
 /**
@@ -14,68 +15,55 @@ const uid = require('../util/uidGenerator');
  * - Idempotent
  * - Prevent negative balance
  */
-async function debitWalletForRecharge({
-  walletId,
-  amount,
-  rechargeTransactionId,
-  rechargeTypeId = null,
-  paymentTransactionId = null
-}) {
+async function debitWalletForRecharge({ userId, amount, rechargeTypeId = null }) {
+  console.log('debitWalletForRecharge called with:-----', { userId, amount, rechargeTypeId });
   return await sequelize.transaction(async (t) => {
     // 🔒 Lock wallet row
-    const wallet = await Wallet.findByPk(walletId, {
+    const wallet = await Wallet.findOne({
+      where: { userId },
       lock: t.LOCK.UPDATE,
       transaction: t
     });
+    console.log('Locked wallet:-----', wallet);
 
     if (!wallet) {
       throw new Error('WALLET_NOT_FOUND');
     }
-
-    // 🔐 Idempotency: same paymentTransactionId cannot debit twice
-    if (paymentTransactionId) {
-      const existingTxn = await WalletTransaction.findOne({
-        where: { paymentTransactionId },
-        transaction: t
-      });
-
-      if (existingTxn) {
-        return existingTxn;
-      }
+    if (Number(amount) < 0) {
+      throw new Error('INVALID_DEDUCT_AMOUNT');
     }
 
     if (Number(wallet.amount) < Number(amount)) {
       throw new Error('INSUFFICIENT_WALLET_BALANCE');
+    }
+    const subCategoryDetails = await SubCategory.findByPk(rechargeTypeId);
+    if (!subCategoryDetails) {
+      throw new Error('INVALID_SUBCATEGORY_ID');
     }
 
     const startingBalance = wallet.amount;
     const endingBalance = Number(startingBalance) - Number(amount);
 
     const walletTxnId = await uid();
-
+// initiare wallet transaction
     const walletTransaction = await WalletTransaction.create(
       {
         id: walletTxnId,
-        walletId,
+        walletId: wallet.id,
         amount,
         startingBalance,
         endingBalance,
         transactionType: 'Recharge',
         balanceType: 'Debit',
-        transactionId: rechargeTransactionId,
         rechargeTypeId,
-        paymentTransactionId,
+        paymentTransactionId: null,
         status: 'success',
-        isUsed: true
       },
       { transaction: t }
     );
 
     // Update wallet balance
-    await wallet.update(
-      { amount: endingBalance },
-      { transaction: t }
-    );
+    await wallet.update({ amount: endingBalance }, { transaction: t });
 
     return walletTransaction;
   });
@@ -93,10 +81,7 @@ async function debitWalletForRecharge({
  */
 async function refundWallet({ rechargeTransactionId }) {
   return await sequelize.transaction(async (t) => {
-    const rechargeTxn = await RechargeTransaction.findByPk(
-      rechargeTransactionId,
-      { transaction: t }
-    );
+    const rechargeTxn = await RechargeTransaction.findByPk(rechargeTransactionId, { transaction: t });
 
     if (!rechargeTxn) {
       throw new Error('RECHARGE_TRANSACTION_NOT_FOUND');
@@ -127,10 +112,7 @@ async function refundWallet({ rechargeTransactionId }) {
     const endingBalance = startingBalance + refundAmount;
 
     // 1️⃣ Credit wallet balance
-    await wallet.update(
-      { amount: endingBalance },
-      { transaction: t }
-    );
+    await wallet.update({ amount: endingBalance }, { transaction: t });
 
     // 2️⃣ Create wallet transaction (REFUND)
     await WalletTransaction.create(
@@ -149,10 +131,7 @@ async function refundWallet({ rechargeTransactionId }) {
     );
 
     // 3️⃣ Mark recharge refunded
-    await rechargeTxn.update(
-      { refundStatus: true },
-      { transaction: t }
-    );
+    await rechargeTxn.update({ refundStatus: true }, { transaction: t });
 
     return {
       refunded: true,

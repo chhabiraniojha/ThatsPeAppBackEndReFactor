@@ -1,5 +1,6 @@
+const e = require('express');
 const operatorModel = require('../../models/OperatorDataModel/operatorData');
-// const circleModel = require('../../models/CircleDataModel/circleData')
+const circleModel = require('../../models/CircleDataModel/circleData')
 // const axios = require('axios')
 // const paymentTransactionModel = require('../../models/PaymentTransactionModel/paymentTransaction')
 // const walletTransactionModel = require('../../models/WalletModels/Wallet Transaction/walletTransaction')
@@ -362,7 +363,7 @@ const paymentModel = require('../../models/PaymentModel/payment');
 //     }
 // }
 
-const { processRecharge } = require('../../services/rechargeOrchestrator.service');
+const { processRecharge ,processRechargeForWallet} = require('../../services/rechargeOrchestrator.service');
 
 /**
  * --------------------------------------------------
@@ -373,7 +374,7 @@ const { processRecharge } = require('../../services/rechargeOrchestrator.service
  * - Calls orchestrator
  * - Returns real-time response
  */
-exports.rechargeAndBillPayments = async (req, res) => {
+exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
   try {
     console.log('Recharge controller hit');
     const {
@@ -507,6 +508,159 @@ exports.rechargeAndBillPayments = async (req, res) => {
       paymentTransactionType: transactionType,
       cashPaymentTransactionId: transactionType === 'cash' ? paymentTransactionId : null,
       walletPaymentTransactionId: null
+    });
+
+    /* --------------------------------------------------
+       6. REAL-TIME RESPONSE
+    -------------------------------------------------- */
+    if (orchestrationResult.status === 'SUCCESS') {
+      return res.status(200).json({
+        success: true,
+        statuscode: 1,
+        message: 'Recharge successful',
+        rechargeTransactionId: orchestrationResult.rechargeTransactionId
+      });
+    }
+
+    if (orchestrationResult.status === 'PENDING') {
+      return res.status(200).json({
+        success: false,
+        statuscode: 2,
+        message: 'Recharge pending',
+        rechargeTransactionId: orchestrationResult.rechargeTransactionId
+      });
+    }
+
+    return res.status(200).json({
+      success: false,
+      statuscode: 0,
+      message: 'Recharge failed',
+      rechargeTransactionId: orchestrationResult.rechargeTransactionId
+    });
+  } catch (error) {
+    console.error('STEP-4 ERROR:', error);
+    return res.status(500).json({
+      success: false,
+      statuscode: 0,
+      message: 'Internal server error'
+    });
+  }
+};
+exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
+  try {
+    console.log('Recharge controller hit');
+    const {
+      ezytm_circle_code,
+      ezytm_operator_code,
+      customer_number,
+      amount,
+      discountedAmount,
+      subCategoryId,
+      transactionType, // 'cash' | 'wallet'
+      rechargeType, // PREPAID | POSTPAID | DTH
+    } = req.body;
+    const user = req.user;
+    const userId = user.id;
+    /* --------------------------------------------------
+       1. BASIC VALIDATION
+    -------------------------------------------------- */
+    if (!ezytm_operator_code || !customer_number || !amount || !subCategoryId || !transactionType || !rechargeType || !discountedAmount) {
+      return res.status(200).json({
+        success: false,
+        statuscode: 0,
+        message: 'Invalid request parameters'
+      });
+    }
+    if (transactionType !== 'wallet') {
+      return res.status(200).json({
+        success: false,
+        statuscode: 0,
+        message: 'transaction type is invalid'
+      });
+    }
+    if (Number(amount) <= 0) {
+      return res.status(200).json({
+        success: false,
+        statuscode: 0,
+        message: 'Invalid recharge amount'
+      });
+    }
+
+    /* --------------------------------------------------
+       2. FETCH OPERATOR (FOR DISCOUNT ONLY)
+    -------------------------------------------------- */
+    const operatorData = await operatorModel.findOne({
+      where: { ezytm_operator_code }
+    });
+
+    if (!operatorData) {
+      return res.status(200).json({
+        success: false,
+        statuscode: 0,
+        message: 'Invalid operator'
+      });
+    }
+    console.log("operatorData", operatorData);
+    /* --------------------------------------------------
+       2. FETCH OPERATOR (FOR DISCOUNT ONLY)
+    -------------------------------------------------- */
+
+    if (ezytm_circle_code) {
+      const circleData = await circleModel.findOne({
+        where: { ezytm_circle_code }
+      });
+
+      if (!circleData) {
+        return res.status(200).json({
+          success: false,
+          statuscode: 0,
+          message: 'Invalid circle'
+        });
+      }
+
+      console.log("circleData", circleData);
+    }
+
+    /* --------------------------------------------------
+       3. BACKEND DISCOUNT RECOMPUTE (SECURITY)
+    -------------------------------------------------- */
+    let beDiscountedAmount;
+    const discountValue = Number(operatorData.discount);
+    const discountType = operatorData.discount_type;
+
+    if (discountType === 'percentage') {
+      beDiscountedAmount = amount - (amount * discountValue) / 100;
+    } else {
+      beDiscountedAmount = amount - discountValue;
+    }
+
+    beDiscountedAmount = Math.ceil(beDiscountedAmount * 10) / 10;
+    console.log("beDiscountedAmount", beDiscountedAmount);  
+
+    if (Number(beDiscountedAmount) !== Number(discountedAmount)) {
+      return res.status(200).json({
+        success: false,
+        statuscode: 0,
+        message: 'Discounted amount mismatch'
+      });
+    }
+
+    /* --------------------------------------------------
+       4. CALL RECHARGE ORCHESTRATION SERVICE
+       (SINGLE SOURCE OF TRUTH)
+    -------------------------------------------------- */
+    const orchestrationResult = await processRechargeForWallet({
+      userId,
+      customerNo: customer_number,
+      amount,
+      discountedAmount: beDiscountedAmount,
+
+      // 🔒 ONLY SOURCE CODES
+      ezytmOperatorCode: ezytm_operator_code,
+      ezytmCircleCode: rechargeType === 'DTH' ? null : ezytm_circle_code,
+
+      subCategoryId,
+      paymentTransactionType: transactionType,
     });
 
     /* --------------------------------------------------
