@@ -21,7 +21,7 @@ exports.a1Recharge = async (data) => {
     const vendorStatus = String(
       response?.data?.Status || response?.data?.status || ''
     ).toUpperCase();
-
+    console.log('A1 Recharge Response status:', vendorStatus);
     if (vendorStatus === 'SUCCESS') {
       return { status: 'SUCCESS', provider: 'a1', raw: response.data };
     }
