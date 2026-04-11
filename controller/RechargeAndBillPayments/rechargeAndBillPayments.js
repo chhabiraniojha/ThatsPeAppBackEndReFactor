@@ -376,7 +376,6 @@ const { processRecharge ,processRechargeForWallet} = require('../../services/rec
  */
 exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
   try {
-    // console.log('Recharge controller hit');
     const {
       ezytm_circle_code,
       ezytm_operator_code,
@@ -389,7 +388,6 @@ exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
       rechargeType, // PREPAID | POSTPAID | DTH
       userId
     } = req.body;
-
     /* --------------------------------------------------
        1. BASIC VALIDATION
     -------------------------------------------------- */
@@ -551,14 +549,6 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
       transactionType, // 'cash' | 'wallet'
       rechargeType, // PREPAID | POSTPAID | DTH
     } = req.body;
-    console.log(ezytm_circle_code,
-      ezytm_operator_code,
-      customer_number,
-      amount,
-      discountedAmount,
-      subCategoryId,
-      transactionType, // 'cash' | 'wallet'
-      rechargeType)
     const user = req.user;
     const userId = user.id;
     /* --------------------------------------------------

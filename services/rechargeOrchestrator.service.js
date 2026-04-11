@@ -109,7 +109,7 @@ async function processRecharge({
       name: 'a1',
       call: a1RechargeService.a1Recharge,
       operatorCode: operatorData.a1_operator_code,
-      circleCode: circleData?.a1_circle_code
+      circleCode: circleData?.a1_circle_code ?? ""
     }
   ];
 
