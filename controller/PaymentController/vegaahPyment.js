@@ -265,7 +265,7 @@ exports.payRequest = async (req, res) => {
       );
     }
     await t.commit();
-    // console.log('PAYMENT DATA CREATED:', paymentData);
+    console.log('PAYMENT DATA CREATED:', paymentData);
 
     let linkurl = payRequestResponse?.data?.paymentLink?.linkUrl + payRequestResponse?.data?.transactionId;
     return res.status(200).json({ linkurl, paymentId: payRequestResponse?.data?.transactionId });
