@@ -52,7 +52,7 @@ exports.payRequest = async (req, res) => {
     discountedAmount,
     purpose
   } = req.body;
-
+  console.log(req.body);
   const t = await sequelize.transaction();
   try {
     const clientIp = requestIp.getClientIp(req);
