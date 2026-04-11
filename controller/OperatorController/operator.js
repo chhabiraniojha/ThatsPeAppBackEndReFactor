@@ -196,27 +196,27 @@ exports.setOperatorDiscount = async (req, res) => {
   const { id, discount } = req.body;
   try {
     let operatorData = await operatorModel.findByPk(id)
-    if(operatorData){
+    if (operatorData) {
       await operatorData.update({
         discount
       })
-       return res.status(200).json({
-      message: " Operator commission updated successfully",
-      success: true,
-      statuscode: 1, 
-    });
+      return res.status(200).json({
+        message: " Operator commission updated successfully",
+        success: true,
+        statuscode: 1,
+      });
     }
-    else{
-       return res.status(200).json({
-      message: " Operator data not found",
-      success: false,
-      statuscode: 0, 
-    });
+    else {
+      return res.status(200).json({
+        message: " Operator data not found",
+        success: false,
+        statuscode: 0,
+      });
     }
 
-   
+
   } catch (error) {
-     
+
     return res
       .status(200)
       .json({ message: "Internal Server Error", success: false });
@@ -234,25 +234,25 @@ exports.getPlaceHolderName = async (req, res) => {
       `https://planapi.in/Api/Mobile/BBPSBillInfo?ApiUserID=5679&ApiPassword=rinku9938300585&Opcode=${operatorCode}`
     );
     let data = await placeHolderResponse.data;
- if(!data.BillInfo){
-       return res.status(200).json({
-      message: "No Placeholder available",
-      success: false,
-      statuscode: 0
-    });
+    if (!data.BillInfo) {
+      return res.status(200).json({
+        message: "No Placeholder available",
+        success: false,
+        statuscode: 0
+      });
     }
 
-    if(data.STATUSCODE=='0'&& data.BillInfo){
-      data=data.BillInfo.parameter
+    if (data.STATUSCODE == '0' && data.BillInfo) {
+      data = data.BillInfo.parameter
     }
-   
+
 
     // console.log(data);
     return res.status(200).json({
       message: "Placeholder name fetch successfully",
       success: true,
       statuscode: 1,
-      placeHolderdata:data,
+      placeHolderdata: data,
     });
   } catch (error) {
     return res.status(200).json({
@@ -314,33 +314,50 @@ exports.getBillInfo = async (req, res) => {
 // GET DTH BILL INFO
 exports.getDthBillInfo = async (req, res) => {
   let { operatorCode, Accountno } = req.query;
-  console.log("operator code --------------------------is ",operatorCode);
-  console.log("account no is -------------------------------",Accountno)
-  try {
-    // operatorCode=parseInt(operatorCode);
-    // console.log(operatorCode);
 
-    const dthBillData = await axios.get(
-      `https://planapi.in/api/Mobile/DTHINFOCheck?apimember_id=5679&api_password=rinku9938300585&Opcode=${operatorCode}&mobile_no=${Accountno}`
-    );
-    console.log("dth bill data is..................................",dthBillData)
-    let data = dthBillData.data;
-    console.log("data is--------------------",data);
+  try {
+    let data;
+
+    if (operatorCode == 28) {
+      const dthBillDataForTataPlay = await axios.get(
+        `https://plancheckapi.in/Users/apis/index.php?api_key=1ce93f-d78352-94c756-a0d74a-050f78&type=Dth_Info&number=${Accountno}&operator=TP`
+      );
+
+      console.log("TataPlay Response:", dthBillDataForTataPlay.data);
+
+      data = {
+        VC: dthBillDataForTataPlay?.data?.result?.data?.dth_number || "",
+        Name: dthBillDataForTataPlay?.data?.result?.data?.customername || "",
+        Balance: 0,
+      };
+
+    } else {
+      const dthBillData = await axios.get(
+        `https://planapi.in/api/Mobile/DTHINFOCheck?apimember_id=5679&api_password=rinku9938300585&Opcode=${operatorCode}&mobile_no=${Accountno}`
+      );
+
+      console.log("Other Operator Response:", dthBillData.data);
+
+      data = dthBillData.data;
+    }
+
     return res.status(200).json({
       message: "Dth Bill Details fetch successfully",
       success: true,
       statuscode: 1,
       data,
     });
+
   } catch (error) {
-    return res.status(200).json({
+    console.log("ERROR:", error?.response?.data || error.message);
+
+    return res.status(500).json({
       message: "Internal Server Error",
       success: false,
       statuscode: 0,
     });
   }
 };
-
 // GET FASTAG BILL INFO
 exports.getFastagBillInfo = async (req, res) => {
   let { operatorCode, VehicleNo } = req.query;
