@@ -228,7 +228,7 @@ async function processRechargeForWallet({
       rechargeTypeId: subCategoryId,
     });
 
-    // console.log("debitWalletForRecharge called--------",walletPaymentTransaction);
+    console.log("debitWalletForRecharge called--------",walletPaymentTransaction);
   
   const rechargeTransaction = await createRechargeTransaction({
     userId,
@@ -272,6 +272,7 @@ async function processRechargeForWallet({
   /* --------------------------------------------------
      STEP 4: VENDOR MAP (EASYTM → VENDOR)
   -------------------------------------------------- */
+  console.log("step 4 reached")
   const vendorMap = [
     {
       name: 'roboticsExchange',

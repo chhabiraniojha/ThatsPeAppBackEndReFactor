@@ -551,6 +551,14 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
       transactionType, // 'cash' | 'wallet'
       rechargeType, // PREPAID | POSTPAID | DTH
     } = req.body;
+    console.log(ezytm_circle_code,
+      ezytm_operator_code,
+      customer_number,
+      amount,
+      discountedAmount,
+      subCategoryId,
+      transactionType, // 'cash' | 'wallet'
+      rechargeType)
     const user = req.user;
     const userId = user.id;
     /* --------------------------------------------------
@@ -592,7 +600,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
         message: 'Invalid operator'
       });
     }
-    // console.log("operatorData", operatorData);
+    console.log("operatorData", operatorData);
     /* --------------------------------------------------
        2. FETCH OPERATOR (FOR DISCOUNT ONLY)
     -------------------------------------------------- */
@@ -610,7 +618,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
         });
       }
 
-      // console.log("circleData", circleData);
+      console.log("circleData", circleData);
     }
 
     /* --------------------------------------------------
