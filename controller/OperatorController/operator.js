@@ -314,6 +314,8 @@ exports.getBillInfo = async (req, res) => {
 // GET DTH BILL INFO
 exports.getDthBillInfo = async (req, res) => {
   let { operatorCode, Accountno } = req.query;
+  console.log("operator code --------------------------is ",operatorCode);
+  console.log("account no is -------------------------------",Accountno)
   try {
     // operatorCode=parseInt(operatorCode);
     // console.log(operatorCode);
@@ -321,9 +323,9 @@ exports.getDthBillInfo = async (req, res) => {
     const dthBillData = await axios.get(
       `https://planapi.in/api/Mobile/DTHINFOCheck?apimember_id=5679&api_password=rinku9938300585&Opcode=${operatorCode}&mobile_no=${Accountno}`
     );
-
-    let data = await dthBillData.data;
-    // console.log(data);
+    console.log("dth bill data is..................................",dthBillData)
+    let data = dthBillData.data;
+    console.log("data is--------------------",data);
     return res.status(200).json({
       message: "Dth Bill Details fetch successfully",
       success: true,
