@@ -208,7 +208,8 @@ async function processRechargeForWallet({
         where: { ezytm_circle_code: ezytmCircleCode }
       })
     : null;
-
+  console.log("circleData is..................................."+circleData);
+  
   /* --------------------------------------------------
      STEP 1: CREATE / FETCH RECHARGE TRANSACTION
      (IDEMPOTENT)
@@ -290,7 +291,7 @@ async function processRechargeForWallet({
       name: 'a1',
       call: a1RechargeService.a1Recharge,
       operatorCode: operatorData.a1_operator_code,
-      circleCode: circleData?.a1_circle_code
+      circleCode: circleData?.a1_circle_code ?? ""
     }
   ];
 

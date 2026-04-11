@@ -657,7 +657,9 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
 
       // 🔒 ONLY SOURCE CODES
       ezytmOperatorCode: ezytm_operator_code,
-      ezytmCircleCode: rechargeType === 'DTH' ? null : ezytm_circle_code,
+      ezytmCircleCode: (rechargeType === 'DTH' || rechargeType === 'FASTAG') 
+  ? null 
+  : ezytm_circle_code,
 
       subCategoryId,
       paymentTransactionType: transactionType,
