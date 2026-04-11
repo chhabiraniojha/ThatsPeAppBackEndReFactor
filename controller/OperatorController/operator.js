@@ -326,9 +326,18 @@ exports.getDthBillInfo = async (req, res) => {
       console.log("TataPlay Response:", dthBillDataForTataPlay.data);
 
       data = {
-        VC: dthBillDataForTataPlay?.data?.result?.data?.dth_number || "",
-        Name: dthBillDataForTataPlay?.data?.result?.data?.customername || "",
-        Balance: 0,
+        "VC": dthBillDataForTataPlay?.data?.result?.data?.dth_number || "",
+        "Name": dthBillDataForTataPlay?.data?.result?.data?.customername || "",
+        "Rmn": "",
+        "Balance": 0,
+        "Monthly": "",
+        "Next Recharge Date": "2026-06-18",
+        "Plan": "",
+        "Address": "sabrang bhadrak",
+        "City": "",
+        "District": "",
+        "State": "26",
+        "PIN Code": "756123"
       };
 
     } else {
