@@ -11,7 +11,7 @@ exports.mobikwikBalanceCheck = async () => {
 
         // Request payload
         const payload = {
-            memberId: "suvransusekharojha27@gmail.com"
+            memberId: "info@digidivine.online"
         };
 
         // Encrypt request
