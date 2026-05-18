@@ -8,6 +8,7 @@ const HOST = "https://alpha3.mobikwik.com"; // UAT host
 const UID = "testalpha1@gmail.com"; // UAT user
 const PASSWORD = "testalpha1@123"; // UAT password
 const SECRET_KEY = "abcd@123"; // For checksum (Validation API only)
+const mobikwikService=require("../../services/mobikwikServices/mobikwik.service")
 
 // ✅ Helper: Generate checksum for Validation API
 function generateChecksum(payload) {
@@ -163,22 +164,20 @@ exports.checkStatus = async (req, res) => {
 
 // 6. Balance Check API for Retailer (optional but useful)
 exports.checkBalance = async (req, res) => {
-  try {
-    const payload = {
-      uid: UID,
-      password: PASSWORD,
-      memberId: UID,
-    };
+      try {
 
-    const response = await axios.post(
-      `${HOST}/recharge/v1/retailerBalance`,
-      payload,
-      { headers: { "Content-Type": "application/json" } }
-    );
+        const data = await mobikwikService.mobikwikBalanceCheck();
 
-    // logRequestResponse("Balance Check", payload, response);
-    return res.json(response.data);
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+        return res.status(200).json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 };
