@@ -96,10 +96,10 @@ exports.viewBill = async (req, res) => {
     try {
 
         // Validation
-        if (!cn || !op || !cir) {
+        if (!cn || !op ) {
             return res.status(400).json({
                 success: false,
-                message: "cn, op and cir are required"
+                message: "cn and op is required"
             });
         }
 
