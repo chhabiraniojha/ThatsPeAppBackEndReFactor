@@ -90,34 +90,35 @@ exports.validateRecharge = async (req, res) => {
 
 // 3. View Bill API
 exports.viewBill = async (req, res) => {
-  try {
-    console.log("0------------------");
-
     const { cn, op, cir } = req.body;
+    console.log(cn,op,cir)
 
-    const payload = {
-      uid: UID,
-      pswd: PASSWORD,
-      cn,
-      op,
-      cir,
-      adParams: {},
-    };
-    console.log("0------------------x");
+    try {
 
-    const response = await axios.post(
-      `${HOST}/retailer/v2/retailerViewbill`,
-      payload,
-      { headers: { "Content-Type": "application/json", "X-MClient": "14" } }
-    );
-    console.log("0------------------xx");
+        // Validation
+        if (!cn || !op || !cir) {
+            return res.status(400).json({
+                success: false,
+                message: "cn, op and cir are required"
+            });
+        }
 
-    // logRequestResponse("View Bill", payload, response);
-    res.json(response.data);
-  } catch (err) {
-    console.log("0------------------xxx");
-    res.status(500).json({ error: err.message });
-  }
+        const data = await mobikwikService.mobikwikViewBill(cn, op, cir);
+
+        return res.status(200).json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+
+        console.error("View Bill Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal Server Error"
+        });
+    }
 };
 
 // 4. Payment / Recharge API
