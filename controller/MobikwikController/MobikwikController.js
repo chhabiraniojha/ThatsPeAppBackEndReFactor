@@ -90,8 +90,8 @@ exports.validateRecharge = async (req, res) => {
 
 // 3. View Bill API
 exports.viewBill = async (req, res) => {
-    const { cn, op, cir } = req.body;
-    console.log(cn,op,cir)
+    const { cn, op, cir,adParams } = req.body;
+    console.log(cn,op,cir,adParams)
 
     try {
 
@@ -103,7 +103,7 @@ exports.viewBill = async (req, res) => {
             });
         }
 
-        const data = await mobikwikService.mobikwikViewBill(cn, op, cir);
+        const data = await mobikwikService.mobikwikViewBill(cn, op, cir,adParams);
 
         return res.status(200).json({
             success: true,

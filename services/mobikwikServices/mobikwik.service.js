@@ -63,7 +63,7 @@ exports.mobikwikBalanceCheck = async () => {
     }
 };
 
-exports.mobikwikViewBill = async (cn, op, cir) => {
+exports.mobikwikViewBill = async (cn, op, cir,adParams) => {
     try {
 
         // Generate auth token
@@ -75,7 +75,7 @@ exports.mobikwikViewBill = async (cn, op, cir) => {
             "cn": cn,
             "op": op,
             "cir": cir,
-            "adParams": {}
+            "adParams": adParams
 
         };
 
