@@ -1,6 +1,7 @@
 const operatorModel = require("../../models/OperatorDataModel/operatorData");
 const circleModel = require("../../models/CircleDataModel/circleData");
 const { default: axios } = require("axios");
+const mobikwikService=require("../../services/mobikwikServices/mobikwik.service")
 
 // --------------- Get Operator Name  By Op code & Get Circle Name By Ci Code ------------
 
@@ -434,11 +435,15 @@ exports.getFastagBillInfo_v2 = async (req, res) => {
     if (data.success) {
       return res.status(200).json({
         success: true,
+        statuscode:1,
+        message:"Fastag Details fetched successfully",
         data
       });
     }else{
       return res.status(200).json({
-        success: true,
+        success: false,
+        statuscode:2,
+        message:"could not fetch details.Try again!",
         data
       });
     }
@@ -451,6 +456,7 @@ exports.getFastagBillInfo_v2 = async (req, res) => {
     //   data,
     // });
   } catch (error) {
+    console.log(error)
     return res.status(500).json({
       message: "Internal Server Error",
       success: false,
