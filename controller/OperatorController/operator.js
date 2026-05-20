@@ -1,7 +1,7 @@
 const operatorModel = require("../../models/OperatorDataModel/operatorData");
 const circleModel = require("../../models/CircleDataModel/circleData");
 const { default: axios } = require("axios");
-const mobikwikService=require("../../services/mobikwikServices/mobikwik.service")
+const mobikwikService = require("../../services/mobikwikServices/mobikwik.service")
 
 // --------------- Get Operator Name  By Op code & Get Circle Name By Ci Code ------------
 
@@ -421,46 +421,67 @@ exports.getFastagBillInfo = async (req, res) => {
   }
 };
 exports.getFastagBillInfo_v2 = async (req, res) => {
+
   const { cn, op, cir } = req.query;
+
   try {
+
     // Validation
     if (!cn || !op) {
       return res.status(400).json({
         success: false,
-        message: "cn and op is required"
+        statuscode: 0,
+        message: "cn and op are required"
       });
     }
-    const adParams = { bankName: cir }
-    const data = await mobikwikService.mobikwikViewBill(cn, op, cir, adParams);
+
+    const adParams = {
+      bankName: cir
+    };
+
+    const data = await mobikwikService.mobikwikViewBill(
+      cn,
+      op,
+      cir,
+      adParams
+    );
+
     if (data.success) {
+
+      const bill = data?.data?.[0];
+
+      const flattenedBill = {
+        ...bill,
+        ...(bill.additionalDetails || {})
+      };
+
+      delete flattenedBill.additionalDetails;
+
       return res.status(200).json({
         success: true,
-        statuscode:1,
-        message:"Fastag Details fetched successfully",
-        data
+        statuscode: 1,
+        message: "Fastag details fetched successfully",
+        data: flattenedBill
       });
-    }else{
+
+    } else {
+
       return res.status(200).json({
         success: false,
-        statuscode:2,
-        message:"could not fetch details.Try again!",
+        statuscode: 2,
+        message: "Could not fetch details. Try again!",
         data
       });
     }
 
-    // console.log(data);
-    // return res.status(200).json({
-    //   message: "Fastag Details fetch successfully",
-    //   success: true,
-    //   statuscode: 1,
-    //   data,
-    // });
   } catch (error) {
-    console.log(error)
+
+    console.log(error);
+
     return res.status(500).json({
-      message: "Internal Server Error",
       success: false,
       statuscode: 0,
+      message: "Internal Server Error"
     });
   }
 };
