@@ -419,6 +419,45 @@ exports.getFastagBillInfo = async (req, res) => {
     });
   }
 };
+exports.getFastagBillInfo_v2 = async (req, res) => {
+  const { cn, op, cir } = req.query;
+  try {
+    // Validation
+    if (!cn || !op) {
+      return res.status(400).json({
+        success: false,
+        message: "cn and op is required"
+      });
+    }
+    const adParams = { bankName: cir }
+    const data = await mobikwikService.mobikwikViewBill(cn, op, cir, adParams);
+    if (data.success) {
+      return res.status(200).json({
+        success: true,
+        data
+      });
+    }else{
+      return res.status(200).json({
+        success: true,
+        data
+      });
+    }
+
+    // console.log(data);
+    // return res.status(200).json({
+    //   message: "Fastag Details fetch successfully",
+    //   success: true,
+    //   statuscode: 1,
+    //   data,
+    // });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Internal Server Error",
+      success: false,
+      statuscode: 0,
+    });
+  }
+};
 
 exports.getGasBillInfo = async (req, res) => {
   let { operatorCode, consumerNo } = req.query;
