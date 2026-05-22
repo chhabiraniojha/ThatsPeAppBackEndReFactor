@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../util/db_connect');
-const OperatorData = require('./OperatorData');
+const OperatorData = require('./operatorData');
 
 const OperatorFields = sequelize.define('OperatorFields', {
 

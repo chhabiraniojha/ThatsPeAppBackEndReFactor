@@ -423,6 +423,7 @@ exports.getFastagBillInfo = async (req, res) => {
 exports.getFastagBillInfo_v2 = async (req, res) => {
 
   const { cn, op } = req.query;
+  
 
   try {
 
