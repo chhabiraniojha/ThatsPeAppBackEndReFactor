@@ -32,6 +32,14 @@ const OperatorData = sequelize.define('OperatorData', {
     type: DataTypes.STRING,
     allowNull: true
   },
+    mobi_operator_code: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+    mobi_cir_code: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   operator_type: {
     type: DataTypes.STRING,
     allowNull: false

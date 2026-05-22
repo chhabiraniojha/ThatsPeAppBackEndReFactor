@@ -422,7 +422,7 @@ exports.getFastagBillInfo = async (req, res) => {
 };
 exports.getFastagBillInfo_v2 = async (req, res) => {
 
-  const { cn, op, cir } = req.query;
+  const { cn, op } = req.query;
 
   try {
 
@@ -434,14 +434,18 @@ exports.getFastagBillInfo_v2 = async (req, res) => {
         message: "cn and op are required"
       });
     }
-
+    const operatorData=await operatorModel.findByPk(op)
+    // console.log(operatorData.dataValues)
+    const cir=operatorData.dataValues.mobi_cir_code;
+    const op_code=operatorData.dataValues.mobi_operator_code;
+    console.log(op_code,cir)
     const adParams = {
       bankName: cir
     };
 
     const data = await mobikwikService.mobikwikViewBill(
       cn,
-      op,
+      op_code,
       cir,
       adParams
     );
