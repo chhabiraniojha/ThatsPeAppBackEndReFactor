@@ -27,21 +27,21 @@ const OperatorFields = sequelize.define('OperatorFields', {
         allowNull: false
     },
 
-    // UI label
+    // Frontend label
     // Example:
     // Vehicle Number
-    // Bank Name
+    // Mobile Number
     // DOB
     label: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     // View Bill API key
     // Example:
     // cn
     // bankName
-    // dob
+    // mobileNumber
     fetch_key: {
         type: DataTypes.STRING,
         allowNull: false
@@ -61,34 +61,71 @@ const OperatorFields = sequelize.define('OperatorFields', {
     // top => direct payload
     // adParams => inside adParams
     placement: {
-        type: DataTypes.ENUM('top', 'adParams'),
+        type: DataTypes.ENUM(
+            'top',
+            'adParams'
+        ),
         allowNull: false,
         defaultValue: 'top'
     },
 
-    // field mandatory or optional
+    // required or optional
     required: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true
     },
+
+    // show on frontend?
     showUser: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true
     },
 
-    // regex validation if available
+    // where value will come from
+    // user => req.body
+    // static => default_value
+    value_source: {
+        type: DataTypes.ENUM(
+            'user',
+            'static'
+        ),
+        allowNull: false,
+        defaultValue: 'user'
+    },
+
+    // static value
+    // Example:
+    // 16
+    // 17
+    default_value: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+
+    // frontend field type
+    // text
+    // number
+    // dropdown
+    // date
+    field_type: {
+        type: DataTypes.ENUM(
+            'text',
+            'number',
+            'dropdown',
+            'date'
+        ),
+        allowNull: false,
+        defaultValue: 'text'
+    },
+
+    // regex validation
     regex: {
         type: DataTypes.STRING,
         allowNull: true
     },
 
-    // dropdown values if needed
-    options: {
-        type: DataTypes.JSON,
-        allowNull: true
-    }
 
 }, {
     tableName: 'operator_fields'

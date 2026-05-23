@@ -52,6 +52,7 @@ const userManagement = require('./routes/UserManagementRoute/userRouter')
 const adminAnalytic = require('./routes/AdminAnalyticsRoute/AdminAnalyticsRoute')
 const notification = require('./routes/NotificationRoute/notification')
 const addTowallet = require('./routes/AddtoWalletRoutes/addToWallet')
+const razorpayRoute = require('./routes/PaymentRoutes/razorpay')
 const { initializeSocket } = require('./util/socket');    
   
 
@@ -115,6 +116,7 @@ app.use('/chat', chatRoute)
 app.use('/user/payment', paymentRoute)
 app.use('/user/test/payment', vegaahPymentRoute)
 app.use('/user/vegaah/payment', vegaahPymentRoute)
+app.use('/user/razorpay',razorpayRoute)
 app.use('/user/alltransactions', allTransactionsRoute)
 app.use('/user/services', subCategoryRoute)
 app.use('/user', operatorRoute)

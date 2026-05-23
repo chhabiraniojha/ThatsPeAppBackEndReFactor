@@ -51,7 +51,7 @@ const Payment = sequelize.define('Payment', {
   },
   gatewayId: {
     type: DataTypes.STRING(50),
-    allowNull: false, 
+    allowNull: false,
     references: {
       model: PaymentGateway,
       key: 'id'
@@ -67,7 +67,18 @@ const Payment = sequelize.define('Payment', {
   },
 
   gatewayTransactionId: {
-    type: DataTypes.STRING(50),    
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  // Razorpay Specific
+  razorpayOrderId: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    unique: true
+  },
+
+  razorpaySignature: {
+    type: DataTypes.STRING(255),
     allowNull: true
   },
 
@@ -104,9 +115,9 @@ const Payment = sequelize.define('Payment', {
     type: DataTypes.JSON,
     allowNull: true
   }
-  
+
 },
-{
+  {
     tableName: 'payments',
     timestamps: true,
 

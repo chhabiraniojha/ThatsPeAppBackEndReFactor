@@ -2,6 +2,7 @@ const express = require('express');
 const router = express();
 const { generateSignature ,vegaahCallback,payRequest,paymentStatusCheck,orderStatusCheck,vegaahReceipt} = require('../../controller/PaymentController/vegaahPyment');
 const Authenticate = require('../../middelWare/auth')
+console.log(payRequest)
 
 router.post('/generate-signature', generateSignature);  
 router.post('/new-paymentlink',Authenticate, payRequest);  
