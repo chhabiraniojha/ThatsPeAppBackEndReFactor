@@ -256,6 +256,7 @@ exports.payRequest = async (req, res) => {
     } catch (error) {
         await t.rollback();
         console.error(error);
+        console.log(error)
         return res.status(500).json({ success: false, message: 'Payment initiation failed' });
     }
 };
