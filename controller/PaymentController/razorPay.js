@@ -250,7 +250,8 @@ exports.payRequest = async (req, res) => {
             message: "Order created successfully",
             data: {
                 orderId: orderId,
-                razorpayOrderId: razorpayOrder.id
+                razorpayOrderId: razorpayOrder.id,
+                razorpayOrder
             }
         });
     } catch (error) {
