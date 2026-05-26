@@ -66,7 +66,7 @@ exports.payRequest = async (req, res) => {
         message: 'Missing Purpose '
       });
     }
-    if (purpose == 'recharge' && (!amount || !customer_number || !subCategoryId || !userId  || !ezytm_operator_code)) {
+    if (purpose == 'recharge' && (!amount || !customer_number || !subCategoryId || !userId || !ezytm_operator_code)) {
       return res.status(200).json({
         success: false,
         statusCode: 0,
@@ -1178,4 +1178,44 @@ exports.orderStatusCheck = async (req, res) => {
     // console.error('Order Status Check Error:', error);
     return res.status(500).json({ error, message: 'Internal Server Error' });
   }
+};
+exports.orderStatusCheck_v1 = async (req, res) => {
+  const { orderId, walletOrderId } = req.body;
+  try {
+    const user = req.user;
+    const userId = user.id;
+
+    let orderRecord;
+    if (orderId) {
+      orderRecord = await Order.findOne({
+        where: { id: orderId, userId }
+      });
+    } else {
+      orderRecord = await walletOrderModel.findOne({
+        where: { id: walletOrderId, userId }
+      })
+    }
+
+    //   orderRecord = await walletOrderModel.findOne({
+    //     where: { id: paymentRecord.walletOrderId, userId }
+    //   });
+    // }
+
+    if (orderRecord.status === 'PROCESSING') {
+      return res.status(200).json({ message: 'Order is PROCESSING', success: false });
+    }
+    if (orderRecord.status === 'SUCCESS') {
+      return res.status(200).json({ message: 'Order Successful', success: true, statuscode: 1 });
+    }
+    if (orderRecord.status === 'PENDING') {
+      return res.status(200).json({ message: 'Order Pending', success: false, statuscode: 2 });
+    }
+    if (orderRecord.status === 'FAILED') {
+      return res.status(200).json({ message: 'Order Failed', success: false, statuscode: 0 });
+    }
+  
+  } catch (error) {
+  // console.error('Order Status Check Error:', error);
+  return res.status(500).json({ error, message: 'Internal Server Error' });
+}
 };
