@@ -1190,17 +1190,23 @@ exports.orderStatusCheck_v1 = async (req, res) => {
       orderRecord = await Order.findOne({
         where: { id: orderId, userId }
       });
+      if(!orderRecord){
+        return res.status(200).json({ message: 'Order not found', success: false });
+      }
     } else {
       orderRecord = await walletOrderModel.findOne({
         where: { id: walletOrderId, userId }
       })
+      if(!orderRecord){
+        return res.status(200).json({ message: 'wallet Order not found', success: false });
+      }
     }
 
     //   orderRecord = await walletOrderModel.findOne({
     //     where: { id: paymentRecord.walletOrderId, userId }
     //   });
     // }
-
+    console.log(orderRecord)
     if (orderRecord.status === 'PROCESSING') {
       return res.status(200).json({ message: 'Order is PROCESSING', success: false });
     }
@@ -1216,6 +1222,7 @@ exports.orderStatusCheck_v1 = async (req, res) => {
   
   } catch (error) {
   // console.error('Order Status Check Error:', error);
+  // console.log(error)
   return res.status(500).json({ error, message: 'Internal Server Error' });
 }
 };
