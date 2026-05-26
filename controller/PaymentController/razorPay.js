@@ -249,7 +249,7 @@ exports.payRequest = async (req, res) => {
             success: true,
             message: "Order created successfully",
             data: {
-                orderId: orderId,
+                orderId: purpose==="recharge"?orderId:walletOrderId,
                 razorpayOrderId: razorpayOrder.id,
                 razorpayOrder
             }
