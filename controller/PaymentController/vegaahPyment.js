@@ -1206,17 +1206,20 @@ exports.orderStatusCheck_v1 = async (req, res) => {
     //     where: { id: paymentRecord.walletOrderId, userId }
     //   });
     // }
-    console.log(orderRecord)
-    if (orderRecord.status === 'PROCESSING') {
+    console.log(orderRecord.dataValues)
+    if (orderRecord.dataValues.status === 'CREATED') {
+      return res.status(200).json({ message: 'Order is CREATED', success: false });
+    }
+    if (orderRecord.dataValues.status === 'PROCESSING') {
       return res.status(200).json({ message: 'Order is PROCESSING', success: false });
     }
-    if (orderRecord.status === 'SUCCESS') {
+    if (orderRecord.dataValues.status === 'SUCCESS') {
       return res.status(200).json({ message: 'Order Successful', success: true, statuscode: 1 });
     }
-    if (orderRecord.status === 'PENDING') {
+    if (orderRecord.dataValues.status === 'PENDING') {
       return res.status(200).json({ message: 'Order Pending', success: false, statuscode: 2 });
     }
-    if (orderRecord.status === 'FAILED') {
+    if (orderRecord.dataValues.status === 'FAILED') {
       return res.status(200).json({ message: 'Order Failed', success: false, statuscode: 0 });
     }
   
