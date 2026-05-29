@@ -455,7 +455,7 @@ exports.webhook = async (req, res) => {
                 // console.error('Payment not found:', transactionId);
                 return;
             }
-
+            console.log("payment record is------------",paymentRecord)
             const { purpose, orderId, walletOrderId } = paymentRecord;
             const finalOrderId = purpose === 'addfund' ? walletOrderId : orderId;
 
