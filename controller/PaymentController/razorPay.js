@@ -351,7 +351,7 @@ exports.verifyPayment = async (req, res) => {
 exports.webhook = async (req, res) => {
     // return res.status(200).json("ok,successfull")
     console.log("webhook hitted")
-    console.log("The body is"+req.body)
+    console.log("The body is"+req.body.toString())
     try {
         // =====================================
         // VERIFY WEBHOOK SIGNATURE
