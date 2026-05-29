@@ -606,6 +606,7 @@ exports.webhook = async (req, res) => {
         -------------------------------------------------- */
         return res.status(200).json("ok");
     } catch (error) {
+        console.log(error)
         // console.error('Vegaah callback error:', error);
         return res.status(500).send('ERROR');
     }
