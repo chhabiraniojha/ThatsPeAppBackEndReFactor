@@ -365,7 +365,7 @@ exports.webhook = async (req, res) => {
 
         const isValid =
             validateWebhookSignature(
-                req.body,
+                body,
                 webhookSignature,
                 process.env.RAZORPAY_WEBHOOK_SECRET
             );
@@ -378,7 +378,7 @@ exports.webhook = async (req, res) => {
                     'Invalid webhook signature'
             });
         }
-        console.log("validation failed")
+        console.log("validation pass")
         // =====================================
         // PARSE EVENT
         // =====================================
