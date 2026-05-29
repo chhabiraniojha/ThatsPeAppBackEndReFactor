@@ -363,6 +363,13 @@ exports.webhook = async (req, res) => {
         // console.log("webhookSignature..........----------" + webhookSignature)
         // console.log("body..........----------" + body)
 
+        console.log({
+            body,
+            webhookSignature,
+            secret:
+                process.env.RAZORPAY_WEBHOOK_SECRET
+        });
+
         const isValid =
             validateWebhookSignature(
                 body,
@@ -408,7 +415,7 @@ exports.webhook = async (req, res) => {
                         razorpayOrderId
                     }
                 });
-            console.log("payment is----------",payment)
+            console.log("payment is----------", payment)
             if (!payment) {
 
                 return res.status(404).json({
@@ -435,184 +442,184 @@ exports.webhook = async (req, res) => {
                 }
             }
         );
-            // console.log('Payment update result:', paymentUpdated);
+        // console.log('Payment update result:', paymentUpdated);
 
-            const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
-            // console.log('Affected payment rows:', affectedPaymentRows);
-            // bypassing these for testing-----
-            if (affectedPaymentRows === 0) {
-                return;
-            }
+        const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
+        // console.log('Affected payment rows:', affectedPaymentRows);
+        // bypassing these for testing-----
+        if (affectedPaymentRows === 0) {
+            return;
+        }
 
-            /* --------------------------------------------------
-               5. FETCH PAYMENT (SAFE NOW)
-            -------------------------------------------------- */
-            const paymentRecord = await Payment.findOne({
-                where: { razorpayOrderId  }
-            });
-
-            if (!paymentRecord) {
-                // console.error('Payment not found:', transactionId);
-                return;
-            }
-            console.log("payment record is------------",paymentRecord)
-            const { purpose, orderId, walletOrderId } = paymentRecord;
-            const finalOrderId = purpose === 'addfund' ? walletOrderId : orderId;
-
-            /* --------------------------------------------------
-               6. ATOMIC ORDER STATUS UPDATE
-            -------------------------------------------------- */
-            let orderUpdated = 0;
-
-            if (purpose === 'addfund') {
-                orderUpdated = await walletOrderModel.update(
-                    { status: 'PROCESSING' },
-                    {
-                        where: {
-                            id: finalOrderId,
-                            status: 'CREATED'
-                        }
-                    }
-                );
-            } else {
-                orderUpdated = await Order.update(
-                    { status: 'PROCESSING' },
-                    {
-                        where: {
-                            id: finalOrderId,
-                            status: 'CREATED'
-                        }
-                    }
-                );
-            }
-            // console.log('Order update result:', orderUpdated);
-            const affectedOrderRows = Array.isArray(orderUpdated) ? orderUpdated[0] : orderUpdated;
-            // bypassing these for testing-----later remove it
-            if (affectedOrderRows === 0) {
-                // console.log('Order already moved:', finalOrderId);
-                return;
-            }
-
-            console.log('step 6.5 is reached');
-            /* --------------------------------------------------
-           6.5 FIRE & FORGET ASYNC WORK 🚀
+        /* --------------------------------------------------
+           5. FETCH PAYMENT (SAFE NOW)
         -------------------------------------------------- */
-            setImmediate(async () => {
-                try {
-                    // console.log('Async processing started for:', transactionId);
+        const paymentRecord = await Payment.findOne({
+            where: { razorpayOrderId }
+        });
 
-                    /* =========================
-                   ADD FUND FLOW
-                ========================= */
-                    if (purpose === 'addfund') {
-                        const walletOrder = await walletOrderModel.findOne({
-                            where: { id: finalOrderId }
-                        });
+        if (!paymentRecord) {
+            // console.error('Payment not found:', transactionId);
+            return;
+        }
+        console.log("payment record is------------", paymentRecord)
+        const { purpose, orderId, walletOrderId } = paymentRecord;
+        const finalOrderId = purpose === 'addfund' ? walletOrderId : orderId;
 
-                        if (!walletOrder) {
-                            // console.error('WalletOrder not found:', finalOrderId);
-                            return;
-                        }
+        /* --------------------------------------------------
+           6. ATOMIC ORDER STATUS UPDATE
+        -------------------------------------------------- */
+        let orderUpdated = 0;
 
-                        // Idempotency guard
-                        if (walletOrder.status !== 'PROCESSING') {
-                            // console.log('WalletOrder already processed:', finalOrderId);
-                            return;
-                        }
-
-                        const addFundResponse = await walletController.addFund({
-                            userId: walletOrder.userId,
-                            amount: walletOrder.amount,
-                            paymentTransactionId: paymentRecord.id
-                        });
-
-                        await walletOrderModel.update(
-                            {
-                                status: addFundResponse?.statuscode === 1 ? 'SUCCESS' : 'FAILED'
-                            },
-                            {
-                                where: {
-                                    id: finalOrderId,
-                                    status: 'PROCESSING'
-                                }
-                            }
-                        );
-
-                        // console.log('Add fund completed:', finalOrderId);
-                    } else {
-                        /* =========================
-                     RECHARGE FLOW
-                  ========================= */
-                        const order = await Order.findOne({
-                            where: { id: finalOrderId }
-                        });
-
-                        if (!order) {
-                            // console.error('Order not found:', finalOrderId);
-                            return;
-                        }
-                        // bypass for testing-----
-                        // Idempotency guard
-                        if (order.status !== 'PROCESSING') {
-                            // console.log('Recharge already processed:', finalOrderId);
-                            return;
-                        }
-
-                        // 🔁 SAME PAYLOAD AS YOUR OLD CODE
-                        const apiDataForRecharge = {
-                            ezytm_circle_code: order.circle,
-                            ezytm_operator_code: order.operator,
-                            customer_number: order.serviceRef,
-                            amount: order.amount,
-                            paymentTransactionId: paymentRecord.id,
-                            subCategoryId: order.serviceType,
-                            transactionType: 'cash',
-                            rechargeType: order.operatorType,
-                            discountedAmount: paymentRecord.amount,
-                            userId: order.userId,
-                            finalAmount: paymentRecord.amount
-                        };
-
-                        let rechargeResponse;
-                        try {
-                            rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`, apiDataForRecharge);
-                            // console.log(rechargeResponse)
-                        } catch (apiErr) {
-                            // console.error('Recharge API error:', finalOrderId, apiErr);
-                            return; // keep PROCESSING → retry later
-                        }
-
-                        const finalStatus =
-                            rechargeResponse?.data?.statuscode === 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode === 0 ? 'FAILED' : 'PENDING';
-
-                        await Order.update(
-                            {
-                                status: finalStatus
-                            },
-                            {
-                                where: {
-                                    id: finalOrderId,
-                                    status: 'PROCESSING'
-                                }
-                            }
-                        );
-                        // console.log('Recharge completed:', finalOrderId, finalStatus);
+        if (purpose === 'addfund') {
+            orderUpdated = await walletOrderModel.update(
+                { status: 'PROCESSING' },
+                {
+                    where: {
+                        id: finalOrderId,
+                        status: 'CREATED'
                     }
-                } catch (err) {
-                    console.error('Async failed', {
-                        transactionId,
-                        orderId: finalOrderId,
-                        err
-                    });
-                    // ❗ DO NOT throw
-                    // Retry cron will handle unfinished PROCESSING orders
                 }
-            });
+            );
+        } else {
+            orderUpdated = await Order.update(
+                { status: 'PROCESSING' },
+                {
+                    where: {
+                        id: finalOrderId,
+                        status: 'CREATED'
+                    }
+                }
+            );
+        }
+        // console.log('Order update result:', orderUpdated);
+        const affectedOrderRows = Array.isArray(orderUpdated) ? orderUpdated[0] : orderUpdated;
+        // bypassing these for testing-----later remove it
+        if (affectedOrderRows === 0) {
+            // console.log('Order already moved:', finalOrderId);
+            return;
+        }
 
-            /* -------------------------------------------------
-               7. RESPOND TO GATEWAY FAST 🚀
-            -------------------------------------------------- */
-            return res.status(200).json("ok");
+        console.log('step 6.5 is reached');
+        /* --------------------------------------------------
+       6.5 FIRE & FORGET ASYNC WORK 🚀
+    -------------------------------------------------- */
+        setImmediate(async () => {
+            try {
+                // console.log('Async processing started for:', transactionId);
+
+                /* =========================
+               ADD FUND FLOW
+            ========================= */
+                if (purpose === 'addfund') {
+                    const walletOrder = await walletOrderModel.findOne({
+                        where: { id: finalOrderId }
+                    });
+
+                    if (!walletOrder) {
+                        // console.error('WalletOrder not found:', finalOrderId);
+                        return;
+                    }
+
+                    // Idempotency guard
+                    if (walletOrder.status !== 'PROCESSING') {
+                        // console.log('WalletOrder already processed:', finalOrderId);
+                        return;
+                    }
+
+                    const addFundResponse = await walletController.addFund({
+                        userId: walletOrder.userId,
+                        amount: walletOrder.amount,
+                        paymentTransactionId: paymentRecord.id
+                    });
+
+                    await walletOrderModel.update(
+                        {
+                            status: addFundResponse?.statuscode === 1 ? 'SUCCESS' : 'FAILED'
+                        },
+                        {
+                            where: {
+                                id: finalOrderId,
+                                status: 'PROCESSING'
+                            }
+                        }
+                    );
+
+                    // console.log('Add fund completed:', finalOrderId);
+                } else {
+                    /* =========================
+                 RECHARGE FLOW
+              ========================= */
+                    const order = await Order.findOne({
+                        where: { id: finalOrderId }
+                    });
+
+                    if (!order) {
+                        // console.error('Order not found:', finalOrderId);
+                        return;
+                    }
+                    // bypass for testing-----
+                    // Idempotency guard
+                    if (order.status !== 'PROCESSING') {
+                        // console.log('Recharge already processed:', finalOrderId);
+                        return;
+                    }
+
+                    // 🔁 SAME PAYLOAD AS YOUR OLD CODE
+                    const apiDataForRecharge = {
+                        ezytm_circle_code: order.circle,
+                        ezytm_operator_code: order.operator,
+                        customer_number: order.serviceRef,
+                        amount: order.amount,
+                        paymentTransactionId: paymentRecord.id,
+                        subCategoryId: order.serviceType,
+                        transactionType: 'cash',
+                        rechargeType: order.operatorType,
+                        discountedAmount: paymentRecord.amount,
+                        userId: order.userId,
+                        finalAmount: paymentRecord.amount
+                    };
+
+                    let rechargeResponse;
+                    try {
+                        rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`, apiDataForRecharge);
+                        // console.log(rechargeResponse)
+                    } catch (apiErr) {
+                        // console.error('Recharge API error:', finalOrderId, apiErr);
+                        return; // keep PROCESSING → retry later
+                    }
+
+                    const finalStatus =
+                        rechargeResponse?.data?.statuscode === 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode === 0 ? 'FAILED' : 'PENDING';
+
+                    await Order.update(
+                        {
+                            status: finalStatus
+                        },
+                        {
+                            where: {
+                                id: finalOrderId,
+                                status: 'PROCESSING'
+                            }
+                        }
+                    );
+                    // console.log('Recharge completed:', finalOrderId, finalStatus);
+                }
+            } catch (err) {
+                console.error('Async failed', {
+                    transactionId,
+                    orderId: finalOrderId,
+                    err
+                });
+                // ❗ DO NOT throw
+                // Retry cron will handle unfinished PROCESSING orders
+            }
+        });
+
+        /* -------------------------------------------------
+           7. RESPOND TO GATEWAY FAST 🚀
+        -------------------------------------------------- */
+        return res.status(200).json("ok");
     } catch (error) {
         // console.error('Vegaah callback error:', error);
         return res.status(500).send('ERROR');
