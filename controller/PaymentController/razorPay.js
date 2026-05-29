@@ -358,7 +358,7 @@ exports.webhook = async (req, res) => {
         const webhookSignature =
             req.headers['x-razorpay-signature'];
 
-        const body = req.body.toString();
+        const body = req.body;
 
         // console.log("webhookSignature..........----------" + webhookSignature)
         // console.log("body..........----------" + body)
