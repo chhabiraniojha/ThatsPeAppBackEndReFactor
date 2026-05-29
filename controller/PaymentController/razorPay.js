@@ -360,16 +360,6 @@ exports.webhook = async (req, res) => {
 
         const body = JSON.stringify(req.body);
 
-        // console.log("webhookSignature..........----------" + webhookSignature)
-        // console.log("body..........----------" + body)
-
-        console.log({
-            body,
-            webhookSignature,
-            secret:
-                process.env.RAZORPAY_WEBHOOK_SECRET
-        });
-
         const isValid =
             validateWebhookSignature(
                 body,
@@ -378,14 +368,12 @@ exports.webhook = async (req, res) => {
             );
 
         if (!isValid) {
-            console.log("validation failed")
             return res.status(400).json({
                 success: false,
                 message:
                     'Invalid webhook signature'
             });
         }
-        console.log("validation pass")
         // =====================================
         // PARSE EVENT
         // =====================================
@@ -400,7 +388,6 @@ exports.webhook = async (req, res) => {
             event.event ===
             'payment.captured'
         ) {
-            console.log("payment captured")
             const paymentEntity =
                 event.payload.payment.entity;
 
@@ -415,13 +402,11 @@ exports.webhook = async (req, res) => {
                         razorpayOrderId
                     }
                 });
-            console.log("payment is----------", payment)
             if (!payment) {
 
                 return res.status(404).json({
                     success: false,
-                    message:
-                        'Payment not found'
+                    message:'Payment not found'
                 });
             }
         }
@@ -442,7 +427,7 @@ exports.webhook = async (req, res) => {
                 }
             }
         );
-        // console.log('Payment update result:', paymentUpdated);
+        console.log('Payment update result:', paymentUpdated);
 
         const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
         // console.log('Affected payment rows:', affectedPaymentRows);
