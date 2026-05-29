@@ -13,7 +13,7 @@ const successHTML = require('../../templates/paymentSuccess');
 const failureHTML = require('../../templates/paymentFailed');
 const pendingHTML = require('../../templates/paymentPending');
 const razorpay = require("../../util/razorpay")
-const { validatePaymentVerification } = require('razorpay/dist/utils/razorpay-utils');
+const { validatePaymentVerification, validateWebhookSignature } = require('razorpay/dist/utils/razorpay-utils');
 
 // exports.generateSignature = async (req, res) => {
 //   try {
@@ -249,7 +249,7 @@ exports.payRequest = async (req, res) => {
             success: true,
             message: "Order created successfully",
             data: {
-                orderId: purpose==="recharge"?orderId:walletOrderId,
+                orderId: purpose === "recharge" ? orderId : walletOrderId,
                 razorpayOrderId: razorpayOrder.id,
                 razorpayOrder
             }
@@ -349,288 +349,298 @@ exports.verifyPayment = async (req, res) => {
 };
 
 exports.webhook = async (req, res) => {
-    return res.status(200).json("ok,successfull")
-    // try {
-    //     /* --------------------------------------------------
-    //        1. READ & DECRYPT CALLBACK
-    //     -------------------------------------------------- */
-    //     const secretKey = process.env.VEGAH_SECRET_KEY;
+    // return res.status(200).json("ok,successfull")
+    try {
+        const webhookSignature =
+            req.headers['x-razorpay-signature'];
 
-    //     if (!req.body?.data) {
-    //         return res.status(400).send('INVALID');
-    //     }
-    //     // console.log('Vegaah Receipt Payload:', req.body);
+        const body =req.body.toString();
 
-    //     let encryptedData = decodeURIComponent(req.body.data).replace('data=', '');
-    //     const key = Buffer.from(secretKey, 'hex');
-    //     const encryptedBuffer = Buffer.from(encryptedData, 'base64');
+        console.log("webhookSignature..........----------"+webhookSignature)
+        console.log("body..........----------"+body)
 
-    //     const decipher = crypto.createDecipheriv('aes-256-ecb', key, null);
-    //     decipher.setAutoPadding(true);
 
-    //     let decrypted = decipher.update(encryptedBuffer, undefined, 'utf8');
-    //     decrypted += decipher.final('utf8');
-    //     decrypted = JSON.parse(decrypted);
-    //     // console.log('Decrypted Receipt Data:', decrypted);
 
-    //     const { transactionId, responseCode, result, rrn, signature, amountDetails, orderDetails } = decrypted;
+        //     /* --------------------------------------------------
+        //        1. READ & DECRYPT CALLBACK
+        //     -------------------------------------------------- */
+        //     const secretKey = process.env.VEGAH_SECRET_KEY;
 
-    //     /* --------------------------------------------------
-    //        2. VERIFY SIGNATURE (FIRST GATE)
-    //     -------------------------------------------------- */
-    //     const dataToHash = transactionId + '|' + secretKey + '|' + responseCode + '|' + amountDetails?.amount;
+        //     if (!req.body?.data) {
+        //         return res.status(400).send('INVALID');
+        //     }
+        //     // console.log('Vegaah Receipt Payload:', req.body);
 
-    //     const generatedSignature = crypto.createHash('sha256').update(dataToHash).digest('hex');
+        //     let encryptedData = decodeURIComponent(req.body.data).replace('data=', '');
+        //     const key = Buffer.from(secretKey, 'hex');
+        //     const encryptedBuffer = Buffer.from(encryptedData, 'base64');
 
-    //     if (signature !== generatedSignature) {
-    //         // console.error('Invalid signature:', transactionId);
-    //         return res.status(200).send('INVALID');
-    //     }
+        //     const decipher = crypto.createDecipheriv('aes-256-ecb', key, null);
+        //     decipher.setAutoPadding(true);
 
-    //     /* --------------------------------------------------
-    //        3. BASIC VALIDATIONS
-    //     -------------------------------------------------- */
-    //     if (amountDetails?.amount !== amountDetails?.originalAmount) {
-    //         // console.error('Amount mismatch:', transactionId);
-    //         return res.status(200).send('INVALID');
-    //     }
+        //     let decrypted = decipher.update(encryptedBuffer, undefined, 'utf8');
+        //     decrypted += decipher.final('utf8');
+        //     decrypted = JSON.parse(decrypted);
+        //     // console.log('Decrypted Receipt Data:', decrypted);
 
-    //     if (responseCode !== '000' || result !== 'SUCCESS') {
-    //         // Mark FAILED safely (idempotent)
-    //         await Payment.update(
-    //             {
-    //                 status: 'FAILED',
-    //                 responseCode,
-    //                 rawCallback: { transactionId, responseCode, result }
-    //             },
-    //             {
-    //                 where: {
-    //                     gatewayTransactionId: transactionId,
-    //                     status: 'INITIATED'
-    //                 }
-    //             }
-    //         );
+        //     const { transactionId, responseCode, result, rrn, signature, amountDetails, orderDetails } = decrypted;
 
-    //         return res.send(failureHTML());
-    //     }
+        //     /* --------------------------------------------------
+        //        2. VERIFY SIGNATURE (FIRST GATE)
+        //     -------------------------------------------------- */
+        //     const dataToHash = transactionId + '|' + secretKey + '|' + responseCode + '|' + amountDetails?.amount;
 
-    //     /*--------------------------------------------------
-    //        4)check payment record exists and compaire the fetchd db amount with vegaah callback amount
-    //     --------------------------------------------------*/
+        //     const generatedSignature = crypto.createHash('sha256').update(dataToHash).digest('hex');
 
-    //     const existingPayment = await Payment.findOne({
-    //         where: { gatewayTransactionId: transactionId }
-    //     });
+        //     if (signature !== generatedSignature) {
+        //         // console.error('Invalid signature:', transactionId);
+        //         return res.status(200).send('INVALID');
+        //     }
 
-    //     if (!existingPayment) {
-    //         // console.error('Payment not found:', transactionId);
-    //         return res.send(successHTML());
-    //     }
+        //     /* --------------------------------------------------
+        //        3. BASIC VALIDATIONS
+        //     -------------------------------------------------- */
+        //     if (amountDetails?.amount !== amountDetails?.originalAmount) {
+        //         // console.error('Amount mismatch:', transactionId);
+        //         return res.status(200).send('INVALID');
+        //     }
 
-    //     if (existingPayment.amount !== amountDetails?.amount) {
-    //         // console.error('Amount mismatch:', transactionId, existingPayment.amount, amountDetails?.amount);
-    //         return res.send(successHTML());
-    //     }
+        //     if (responseCode !== '000' || result !== 'SUCCESS') {
+        //         // Mark FAILED safely (idempotent)
+        //         await Payment.update(
+        //             {
+        //                 status: 'FAILED',
+        //                 responseCode,
+        //                 rawCallback: { transactionId, responseCode, result }
+        //             },
+        //             {
+        //                 where: {
+        //                     gatewayTransactionId: transactionId,
+        //                     status: 'INITIATED'
+        //                 }
+        //             }
+        //         );
 
-    //     /* --------------------------------------------------
-    //        4. ATOMIC PAYMENT UPDATE (IDEMPOTENT)
-    //     -------------------------------------------------- */
-    //     const paymentUpdated = await Payment.update(
-    //         {
-    //             status: 'SUCCESS',
-    //             rrn,
-    //             responseCode,
-    //             rawCallback: decrypted
-    //         },
-    //         {
-    //             where: {
-    //                 gatewayTransactionId: transactionId,
-    //                 status: 'INITIATED'
-    //             }
-    //         }
-    //     );
-    //     // console.log('Payment update result:', paymentUpdated);
+        //         return res.send(failureHTML());
+        //     }
 
-    //     const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
-    //     // console.log('Affected payment rows:', affectedPaymentRows);
-    //     // bypassing these for testing-----
-    //     if (affectedPaymentRows === 0) {
-    //         return res.send(successHTML());
-    //     }
+        //     /*--------------------------------------------------
+        //        4)check payment record exists and compaire the fetchd db amount with vegaah callback amount
+        //     --------------------------------------------------*/
 
-    //     /* --------------------------------------------------
-    //        5. FETCH PAYMENT (SAFE NOW)
-    //     -------------------------------------------------- */
-    //     const paymentRecord = await Payment.findOne({
-    //         where: { gatewayTransactionId: transactionId }
-    //     });
+        //     const existingPayment = await Payment.findOne({
+        //         where: { gatewayTransactionId: transactionId }
+        //     });
 
-    //     if (!paymentRecord) {
-    //         // console.error('Payment not found:', transactionId);
-    //         return res.send(successHTML());
-    //     }
+        //     if (!existingPayment) {
+        //         // console.error('Payment not found:', transactionId);
+        //         return res.send(successHTML());
+        //     }
 
-    //     const { purpose, orderId, walletOrderId } = paymentRecord;
-    //     const finalOrderId = purpose === 'addfund' ? walletOrderId : orderId;
+        //     if (existingPayment.amount !== amountDetails?.amount) {
+        //         // console.error('Amount mismatch:', transactionId, existingPayment.amount, amountDetails?.amount);
+        //         return res.send(successHTML());
+        //     }
 
-    //     /* --------------------------------------------------
-    //        6. ATOMIC ORDER STATUS UPDATE
-    //     -------------------------------------------------- */
-    //     let orderUpdated = 0;
+        //     /* --------------------------------------------------
+        //        4. ATOMIC PAYMENT UPDATE (IDEMPOTENT)
+        //     -------------------------------------------------- */
+        //     const paymentUpdated = await Payment.update(
+        //         {
+        //             status: 'SUCCESS',
+        //             rrn,
+        //             responseCode,
+        //             rawCallback: decrypted
+        //         },
+        //         {
+        //             where: {
+        //                 gatewayTransactionId: transactionId,
+        //                 status: 'INITIATED'
+        //             }
+        //         }
+        //     );
+        //     // console.log('Payment update result:', paymentUpdated);
 
-    //     if (purpose === 'addfund') {
-    //         orderUpdated = await walletOrderModel.update(
-    //             { status: 'PROCESSING' },
-    //             {
-    //                 where: {
-    //                     id: finalOrderId,
-    //                     status: 'CREATED'
-    //                 }
-    //             }
-    //         );
-    //     } else {
-    //         orderUpdated = await Order.update(
-    //             { status: 'PROCESSING' },
-    //             {
-    //                 where: {
-    //                     id: finalOrderId,
-    //                     status: 'CREATED'
-    //                 }
-    //             }
-    //         );
-    //     }
-    //     // console.log('Order update result:', orderUpdated);
-    //     const affectedOrderRows = Array.isArray(orderUpdated) ? orderUpdated[0] : orderUpdated;
-    //     // bypassing these for testing-----later remove it
-    //     if (affectedOrderRows === 0) {
-    //         // console.log('Order already moved:', finalOrderId);
-    //         return res.send(successHTML());
-    //     }
+        //     const affectedPaymentRows = Array.isArray(paymentUpdated) ? paymentUpdated[0] : paymentUpdated;
+        //     // console.log('Affected payment rows:', affectedPaymentRows);
+        //     // bypassing these for testing-----
+        //     if (affectedPaymentRows === 0) {
+        //         return res.send(successHTML());
+        //     }
 
-    //     // console.log('step 6.5 is reached');
-    //     /* --------------------------------------------------
-    //    6.5 FIRE & FORGET ASYNC WORK 🚀
-    // -------------------------------------------------- */
-    //     setImmediate(async () => {
-    //         try {
-    //             // console.log('Async processing started for:', transactionId);
+        //     /* --------------------------------------------------
+        //        5. FETCH PAYMENT (SAFE NOW)
+        //     -------------------------------------------------- */
+        //     const paymentRecord = await Payment.findOne({
+        //         where: { gatewayTransactionId: transactionId }
+        //     });
 
-    //             /* =========================
-    //            ADD FUND FLOW
-    //         ========================= */
-    //             if (purpose === 'addfund') {
-    //                 const walletOrder = await walletOrderModel.findOne({
-    //                     where: { id: finalOrderId }
-    //                 });
+        //     if (!paymentRecord) {
+        //         // console.error('Payment not found:', transactionId);
+        //         return res.send(successHTML());
+        //     }
 
-    //                 if (!walletOrder) {
-    //                     // console.error('WalletOrder not found:', finalOrderId);
-    //                     return;
-    //                 }
+        //     const { purpose, orderId, walletOrderId } = paymentRecord;
+        //     const finalOrderId = purpose === 'addfund' ? walletOrderId : orderId;
 
-    //                 // Idempotency guard
-    //                 if (walletOrder.status !== 'PROCESSING') {
-    //                     // console.log('WalletOrder already processed:', finalOrderId);
-    //                     return;
-    //                 }
+        //     /* --------------------------------------------------
+        //        6. ATOMIC ORDER STATUS UPDATE
+        //     -------------------------------------------------- */
+        //     let orderUpdated = 0;
 
-    //                 const addFundResponse = await walletController.addFund({
-    //                     userId: walletOrder.userId,
-    //                     amount: walletOrder.amount,
-    //                     paymentTransactionId: paymentRecord.id
-    //                 });
+        //     if (purpose === 'addfund') {
+        //         orderUpdated = await walletOrderModel.update(
+        //             { status: 'PROCESSING' },
+        //             {
+        //                 where: {
+        //                     id: finalOrderId,
+        //                     status: 'CREATED'
+        //                 }
+        //             }
+        //         );
+        //     } else {
+        //         orderUpdated = await Order.update(
+        //             { status: 'PROCESSING' },
+        //             {
+        //                 where: {
+        //                     id: finalOrderId,
+        //                     status: 'CREATED'
+        //                 }
+        //             }
+        //         );
+        //     }
+        //     // console.log('Order update result:', orderUpdated);
+        //     const affectedOrderRows = Array.isArray(orderUpdated) ? orderUpdated[0] : orderUpdated;
+        //     // bypassing these for testing-----later remove it
+        //     if (affectedOrderRows === 0) {
+        //         // console.log('Order already moved:', finalOrderId);
+        //         return res.send(successHTML());
+        //     }
 
-    //                 await walletOrderModel.update(
-    //                     {
-    //                         status: addFundResponse?.statuscode === 1 ? 'SUCCESS' : 'FAILED'
-    //                     },
-    //                     {
-    //                         where: {
-    //                             id: finalOrderId,
-    //                             status: 'PROCESSING'
-    //                         }
-    //                     }
-    //                 );
+        //     // console.log('step 6.5 is reached');
+        //     /* --------------------------------------------------
+        //    6.5 FIRE & FORGET ASYNC WORK 🚀
+        // -------------------------------------------------- */
+        //     setImmediate(async () => {
+        //         try {
+        //             // console.log('Async processing started for:', transactionId);
 
-    //                 // console.log('Add fund completed:', finalOrderId);
-    //             } else {
-    //                 /* =========================
-    //              RECHARGE FLOW
-    //           ========================= */
-    //                 const order = await Order.findOne({
-    //                     where: { id: finalOrderId }
-    //                 });
+        //             /* =========================
+        //            ADD FUND FLOW
+        //         ========================= */
+        //             if (purpose === 'addfund') {
+        //                 const walletOrder = await walletOrderModel.findOne({
+        //                     where: { id: finalOrderId }
+        //                 });
 
-    //                 if (!order) {
-    //                     // console.error('Order not found:', finalOrderId);
-    //                     return;
-    //                 }
-    //                 // bypass for testing-----
-    //                 // Idempotency guard
-    //                 if (order.status !== 'PROCESSING') {
-    //                     // console.log('Recharge already processed:', finalOrderId);
-    //                     return;
-    //                 }
+        //                 if (!walletOrder) {
+        //                     // console.error('WalletOrder not found:', finalOrderId);
+        //                     return;
+        //                 }
 
-    //                 // 🔁 SAME PAYLOAD AS YOUR OLD CODE
-    //                 const apiDataForRecharge = {
-    //                     ezytm_circle_code: order.circle,
-    //                     ezytm_operator_code: order.operator,
-    //                     customer_number: order.serviceRef,
-    //                     amount: order.amount,
-    //                     paymentTransactionId: paymentRecord.id,
-    //                     subCategoryId: order.serviceType,
-    //                     transactionType: 'cash',
-    //                     rechargeType: order.operatorType,
-    //                     discountedAmount: paymentRecord.amount,
-    //                     userId: order.userId,
-    //                     finalAmount: paymentRecord.amount
-    //                 };
+        //                 // Idempotency guard
+        //                 if (walletOrder.status !== 'PROCESSING') {
+        //                     // console.log('WalletOrder already processed:', finalOrderId);
+        //                     return;
+        //                 }
 
-    //                 let rechargeResponse;
-    //                 try {
-    //                     rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`, apiDataForRecharge);
-    //                     // console.log(rechargeResponse)
-    //                 } catch (apiErr) {
-    //                     // console.error('Recharge API error:', finalOrderId, apiErr);
-    //                     return; // keep PROCESSING → retry later
-    //                 }
+        //                 const addFundResponse = await walletController.addFund({
+        //                     userId: walletOrder.userId,
+        //                     amount: walletOrder.amount,
+        //                     paymentTransactionId: paymentRecord.id
+        //                 });
 
-    //                 const finalStatus =
-    //                     rechargeResponse?.data?.statuscode === 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode === 0 ? 'FAILED' : 'PENDING';
+        //                 await walletOrderModel.update(
+        //                     {
+        //                         status: addFundResponse?.statuscode === 1 ? 'SUCCESS' : 'FAILED'
+        //                     },
+        //                     {
+        //                         where: {
+        //                             id: finalOrderId,
+        //                             status: 'PROCESSING'
+        //                         }
+        //                     }
+        //                 );
 
-    //                 await Order.update(
-    //                     {
-    //                         status: finalStatus
-    //                     },
-    //                     {
-    //                         where: {
-    //                             id: finalOrderId,
-    //                             status: 'PROCESSING'
-    //                         }
-    //                     }
-    //                 );
-    //                 // console.log('Recharge completed:', finalOrderId, finalStatus);
-    //             }
-    //         } catch (err) {
-    //             console.error('Async failed', {
-    //                 transactionId,
-    //                 orderId: finalOrderId,
-    //                 err
-    //             });
-    //             // ❗ DO NOT throw
-    //             // Retry cron will handle unfinished PROCESSING orders
-    //         }
-    //     });
+        //                 // console.log('Add fund completed:', finalOrderId);
+        //             } else {
+        //                 /* =========================
+        //              RECHARGE FLOW
+        //           ========================= */
+        //                 const order = await Order.findOne({
+        //                     where: { id: finalOrderId }
+        //                 });
 
-    //     /* -------------------------------------------------
-    //        7. RESPOND TO GATEWAY FAST 🚀
-    //     -------------------------------------------------- */
-    //     return res.send(successHTML());
-    // } catch (error) {
-    //     // console.error('Vegaah callback error:', error);
-    //     return res.status(500).send('ERROR');
-    // }
+        //                 if (!order) {
+        //                     // console.error('Order not found:', finalOrderId);
+        //                     return;
+        //                 }
+        //                 // bypass for testing-----
+        //                 // Idempotency guard
+        //                 if (order.status !== 'PROCESSING') {
+        //                     // console.log('Recharge already processed:', finalOrderId);
+        //                     return;
+        //                 }
+
+        //                 // 🔁 SAME PAYLOAD AS YOUR OLD CODE
+        //                 const apiDataForRecharge = {
+        //                     ezytm_circle_code: order.circle,
+        //                     ezytm_operator_code: order.operator,
+        //                     customer_number: order.serviceRef,
+        //                     amount: order.amount,
+        //                     paymentTransactionId: paymentRecord.id,
+        //                     subCategoryId: order.serviceType,
+        //                     transactionType: 'cash',
+        //                     rechargeType: order.operatorType,
+        //                     discountedAmount: paymentRecord.amount,
+        //                     userId: order.userId,
+        //                     finalAmount: paymentRecord.amount
+        //                 };
+
+        //                 let rechargeResponse;
+        //                 try {
+        //                     rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`, apiDataForRecharge);
+        //                     // console.log(rechargeResponse)
+        //                 } catch (apiErr) {
+        //                     // console.error('Recharge API error:', finalOrderId, apiErr);
+        //                     return; // keep PROCESSING → retry later
+        //                 }
+
+        //                 const finalStatus =
+        //                     rechargeResponse?.data?.statuscode === 1 ? 'SUCCESS' : rechargeResponse?.data?.statuscode === 0 ? 'FAILED' : 'PENDING';
+
+        //                 await Order.update(
+        //                     {
+        //                         status: finalStatus
+        //                     },
+        //                     {
+        //                         where: {
+        //                             id: finalOrderId,
+        //                             status: 'PROCESSING'
+        //                         }
+        //                     }
+        //                 );
+        //                 // console.log('Recharge completed:', finalOrderId, finalStatus);
+        //             }
+        //         } catch (err) {
+        //             console.error('Async failed', {
+        //                 transactionId,
+        //                 orderId: finalOrderId,
+        //                 err
+        //             });
+        //             // ❗ DO NOT throw
+        //             // Retry cron will handle unfinished PROCESSING orders
+        //         }
+        //     });
+
+        //     /* -------------------------------------------------
+        //        7. RESPOND TO GATEWAY FAST 🚀
+        //     -------------------------------------------------- */
+        //     return res.send(successHTML());
+    } catch (error) {
+        // console.error('Vegaah callback error:', error);
+        return res.status(500).send('ERROR');
+    }
 };
 exports.paymentStatusCheck = async (req, res) => {
     const { paymentId } = req.body;
