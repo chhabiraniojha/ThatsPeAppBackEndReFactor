@@ -371,14 +371,14 @@ exports.webhook = async (req, res) => {
             );
 
         if (!isValid) {
-
+            console.log("validation failed")
             return res.status(400).json({
                 success: false,
                 message:
                     'Invalid webhook signature'
             });
         }
-
+        console.log("validation failed")
         // =====================================
         // PARSE EVENT
         // =====================================
@@ -393,7 +393,7 @@ exports.webhook = async (req, res) => {
             event.event ===
             'payment.captured'
         ) {
-
+            console.log("payment captured")
             const paymentEntity =
                 event.payload.payment.entity;
 
