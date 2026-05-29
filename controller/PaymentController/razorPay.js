@@ -350,7 +350,7 @@ exports.verifyPayment = async (req, res) => {
 
 exports.webhook = async (req, res) => {
     // return res.status(200).json("ok,successfull")
-    console.log("webhook hitted")
+    // console.log("webhook hitted")
     try {
         // =====================================
         // VERIFY WEBHOOK SIGNATURE
@@ -406,13 +406,13 @@ exports.webhook = async (req, res) => {
 
                 return res.status(404).json({
                     success: false,
-                    message:'Payment not found'
+                    message: 'Payment not found'
                 });
             }
         }
 
 
-        console.log("payment found7777777777777777777")
+        // console.log("payment found7777777777777777777")
         /* --------------------------------------------------
            4. ATOMIC PAYMENT UPDATE (IDEMPOTENT)
         -------------------------------------------------- */
@@ -485,7 +485,7 @@ exports.webhook = async (req, res) => {
             return;
         }
 
-        console.log('step 6.5 is reached');
+        // console.log('step 6.5 is reached');
         /* --------------------------------------------------
        6.5 FIRE & FORGET ASYNC WORK 🚀
     -------------------------------------------------- */
@@ -606,9 +606,9 @@ exports.webhook = async (req, res) => {
         -------------------------------------------------- */
         return res.status(200).json("ok");
     } catch (error) {
-        console.log(error)
+        // console.log(error)
         // console.error('Vegaah callback error:', error);
-        return res.status(500).send('ERROR');
+        return res.status(500).json('ERROR');
     }
 };
 exports.paymentStatusCheck = async (req, res) => {
