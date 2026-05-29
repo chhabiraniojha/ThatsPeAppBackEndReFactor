@@ -351,7 +351,6 @@ exports.verifyPayment = async (req, res) => {
 exports.webhook = async (req, res) => {
     // return res.status(200).json("ok,successfull")
     console.log("webhook hitted")
-    console.log("The body is...................",req.body)
     try {
         // =====================================
         // VERIFY WEBHOOK SIGNATURE
@@ -385,7 +384,6 @@ exports.webhook = async (req, res) => {
         // =====================================
 
         const event = JSON.parse(body);
-        console.log("event is ----------------",event)
 
         // =====================================
         // PAYMENT CAPTURED
@@ -422,16 +420,13 @@ exports.webhook = async (req, res) => {
         }
 
 
-
+        console.log("payment found7777777777777777777")
         /* --------------------------------------------------
            4. ATOMIC PAYMENT UPDATE (IDEMPOTENT)
         -------------------------------------------------- */
         const paymentUpdated = await Payment.update(
             {
                 status: 'SUCCESS',
-                rrn,
-                responseCode,
-                rawCallback: decrypted
             },
             {
                 where: {
