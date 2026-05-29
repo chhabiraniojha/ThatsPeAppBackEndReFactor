@@ -383,7 +383,7 @@ exports.webhook = async (req, res) => {
         // =====================================
         // PAYMENT CAPTURED
         // =====================================
-
+        let razorpay_order_id;
         if (
             event.event ===
             'payment.captured'
@@ -391,7 +391,7 @@ exports.webhook = async (req, res) => {
             const paymentEntity =
                 event.payload.payment.entity;
 
-            const razorpayOrderId =
+            razorpayOrderId =
                 paymentEntity.order_id;
 
             const razorpayPaymentId =
