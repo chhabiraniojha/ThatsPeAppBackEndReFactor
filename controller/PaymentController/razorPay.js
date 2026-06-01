@@ -43,224 +43,269 @@ const { validatePaymentVerification, validateWebhookSignature } = require('razor
 //   }
 // };
 exports.payRequest = async (req, res) => {
-
-    // return res.status(200).json("hitted")
-    const {
-        ezytm_circle_code,
-        ezytm_operator_code,
-        customer_number,
-        amount,
-        subCategoryId,
-        status,
-        rechargeType,
-        discountedAmount,
-        purpose
-    } = req.body;
-    // console.log(req.body);
-    const t = await sequelize.transaction();
     try {
-        const clientIp = requestIp.getClientIp(req);
+        const {
+            ezytm_circle_code,
+            ezytm_operator_code,
+            customer_number,
+            amount,
+            subCategoryId,
+            rechargeType,
+            discountedAmount,
+            purpose
+        } = req.body;
+
         const user = req.user;
         const userId = user.id;
-        // const userId = "XeRKNcdsAAsbFhB2ZjF9ZS"
-        let finalAmount;
-        if (!((purpose && purpose == 'recharge') || purpose == 'addfund')) {
+
+        let finalAmount = amount;
+
+        // ---------------- VALIDATIONS ----------------
+
+        if (!['recharge', 'addfund'].includes(purpose)) {
             return res.status(200).json({
                 success: false,
                 statusCode: 0,
-                message: 'Missing Purpose '
-            });
-        }
-        if (purpose == 'recharge' && (!amount || !customer_number || !subCategoryId || !userId || !ezytm_operator_code)) {
-            return res.status(200).json({
-                success: false,
-                statusCode: 0,
-                message: 'Missing Recharge Details '
+                message: 'Invalid purpose'
             });
         }
 
-        if (purpose == 'addfund' && (!amount || !userId)) {
+        if (
+            purpose === 'recharge' &&
+            (!amount ||
+                !customer_number ||
+                !subCategoryId ||
+                !userId ||
+                !ezytm_operator_code)
+        ) {
             return res.status(200).json({
                 success: false,
                 statusCode: 0,
-                message: 'Missing Walet Recharge Details '
+                message: 'Missing Recharge Details'
             });
         }
 
-        if (amount < 0 || amount == 0 || discountedAmount < 0 || discountedAmount == 0) {
+        if (purpose === 'addfund' && (!amount || !userId)) {
             return res.status(200).json({
                 success: false,
                 statusCode: 0,
-                message: 'Amount or Discounted Amount is not valid'
+                message: 'Missing Wallet Recharge Details'
             });
         }
-        // Prepare the data for required in order table create --
-        if (purpose == 'recharge') {
+
+        if (Number(amount) <= 0) {
+            return res.status(200).json({
+                success: false,
+                statusCode: 0,
+                message: 'Invalid Amount'
+            });
+        }
+
+        // ---------------- RECHARGE LOGIC ----------------
+
+        if (purpose === 'recharge') {
             const operatorData = await operatorModel.findOne({
-                where: { ezytm_operator_code: ezytm_operator_code }
+                where: {
+                    ezytm_operator_code
+                }
             });
 
             if (!operatorData) {
                 return res.status(200).json({
                     success: false,
                     statusCode: 0,
-                    message: 'Operator not found '
+                    message: 'Operator not found'
                 });
             }
 
             const discountAmount = operatorData.discount;
             const discountType = operatorData.discount_type;
-            // const deductAmount=(amount*discountAmount)/100
 
-            if (discountType == 'percentage') {
-                finalAmount = amount - (amount * discountAmount) / 100;
+            if (discountType === 'percentage') {
+                finalAmount =
+                    amount - (amount * discountAmount) / 100;
             } else {
                 finalAmount = amount - discountAmount;
             }
+
             finalAmount = Math.ceil(finalAmount * 10) / 10;
-            // console.log('FINAL AMOUNT AFTER DISCOUNT:--->', finalAmount);
-            if (discountedAmount != finalAmount) {
+
+            if (Number(discountedAmount) !== Number(finalAmount)) {
                 return res.status(200).json({
                     success: false,
                     statusCode: 0,
-                    message: 'Discounted  amount is not perfect '
+                    message: 'Discounted amount mismatch'
                 });
             }
-
-            //math.cell use for all api to round the amont
         }
 
-        //creae order table entry for recharge purpose
+        // ---------------- IDS ----------------
+
         const orderId = await UIDGenerator();
         const walletOrderId = await UIDGenerator();
 
-        // console.log(
-        //   'GENERATED ORDER ID:',
-        //   orderId,
-        //   userId,
-        //   subCategoryId,
-        //   customer_number,
-        //   amount,
-        //   rechargeType,
-        //   ezytm_operator_code,
-        //   ezytm_circle_code
-        // );
-
-        // order initiate
-        let orderData;
-        if (purpose == 'recharge') {
-            orderData = await Order.create(
-                {
-                    id: orderId,
-                    userId: userId,
-                    serviceType: subCategoryId,
-                    serviceRef: customer_number,
-                    operatorType: rechargeType,
-                    operator: ezytm_operator_code,
-                    circle: ezytm_circle_code,
-                    amount: amount,
-                    status: 'CREATED'
-                },
-                { transaction: t }
-            );
-        } else if (purpose == 'addfund') {
-            const wallet = await walletModel.findOne({ where: { userId: userId } });
-            if (!wallet) {
-                return res.status(200).json({ message: 'No wallet found for user', success: false, statuscode: 0 });
-            }
-            // console.log('WALLET FOUND FOR USER:', wallet?.dataValues?.id);
-            orderData = await walletOrderModel.create(
-                {
-                    id: walletOrderId,
-                    userId: userId,
-                    walletId: wallet?.dataValues?.id,
-                    amount: amount,
-                    walletAction: 'ADD',
-                    status: 'CREATED'
-                },
-                { transaction: t }
-            );
-        }
         const payableAmount =
-            purpose == 'recharge'
+            purpose === 'recharge'
                 ? finalAmount
                 : amount;
-        // console.log('ORDER DATA CREATED:', orderData);
-        const receipt_id =
-            purpose == 'recharge'
+
+        const receiptId =
+            purpose === 'recharge'
                 ? orderId
                 : walletOrderId;
-        //razorpay order creation
-        const razorpayOrder =
-            await razorpay.orders.create({
 
-                amount:
-                    Number(payableAmount) * 100,
+        // ---------------- RAZORPAY ORDER ----------------
+        // IMPORTANT:
+        // NO TRANSACTION BEFORE THIS
 
-                currency: 'INR',
-
-                receipt: receipt_id
-            });
-        console.log(razorpayOrder)
-        const paymentId = await UIDGenerator();
-        let paymentData;
-        if (purpose == 'recharge') {
-            paymentData = await Payment.create(
-                {
-                    id: paymentId,
-                    orderId: orderId,
-                    userId: userId,
-                    gateway: 'razorpay',
-                    paymentMode: 'UPI',
-                    gatewayTransactionId: null,
-                    razorpayOrderId: razorpayOrder.id,
-                    razorpaySignature: null,
-                    amount: payableAmount,
-                    status: 'INITIATED',
-                    purpose: purpose,
-                    responseCode: null,
-                    rawCallback: null
-                },
-                { transaction: t }
-            );
-        } else if (purpose == 'addfund') {
-            paymentData = await Payment.create(
-                {
-                    id: paymentId,
-                    walletOrderId: walletOrderId,
-                    userId: userId,
-                    gateway: 'VEGAH',
-                    paymentMode: 'UPI',
-                    gatewayTransactionId: null,
-                    razorpayOrderId: razorpayOrder.id,
-                    razorpaySignature: null,
-                    amount: amount,
-                    status: 'INITIATED',
-                    purpose: purpose,
-                    responseCode: null,
-                    rawCallback: null
-                },
-                { transaction: t }
-            );
-        }
-        await t.commit();
-        // console.log('PAYMENT DATA CREATED:', paymentData);
-        return res.status(200).json({
-            success: true,
-            message: "Order created successfully",
-            data: {
-                orderId: purpose === "recharge" ? orderId : walletOrderId,
-                razorpayOrderId: razorpayOrder.id,
-                razorpayOrder
-            }
+        const razorpayOrder = await razorpay.orders.create({
+            amount: Number(payableAmount) * 100,
+            currency: 'INR',
+            receipt: receiptId
         });
+
+        // ---------------- START TRANSACTION ----------------
+
+        const t = await sequelize.transaction();
+
+        try {
+            // ---------------- ORDER CREATION ----------------
+
+            if (purpose === 'recharge') {
+                await Order.create(
+                    {
+                        id: orderId,
+                        userId,
+                        serviceType: subCategoryId,
+                        serviceRef: customer_number,
+                        operatorType: rechargeType,
+                        operator: ezytm_operator_code,
+                        circle: ezytm_circle_code,
+                        amount,
+                        status: 'CREATED'
+                    },
+                    { transaction: t }
+                );
+            }
+
+            if (purpose === 'addfund') {
+                const wallet = await walletModel.findOne({
+                    where: { userId },
+                    transaction: t
+                });
+
+                if (!wallet) {
+                    await t.rollback();
+
+                    return res.status(200).json({
+                        success: false,
+                        statusCode: 0,
+                        message: 'Wallet not found'
+                    });
+                }
+
+                await walletOrderModel.create(
+                    {
+                        id: walletOrderId,
+                        userId,
+                        walletId: wallet.id,
+                        amount,
+                        walletAction: 'ADD',
+                        status: 'CREATED'
+                    },
+                    { transaction: t }
+                );
+            }
+
+            // ---------------- PAYMENT ENTRY ----------------
+
+            const paymentId = await UIDGenerator();
+
+            await Payment.create(
+                {
+                    id: paymentId,
+
+                    orderId:
+                        purpose === 'recharge'
+                            ? orderId
+                            : null,
+
+                    walletOrderId:
+                        purpose === 'addfund'
+                            ? walletOrderId
+                            : null,
+
+                    userId,
+
+                    gateway:
+                        purpose === 'recharge'
+                            ? 'razorpay'
+                            : 'VEGAH',
+
+                    paymentMode: 'UPI',
+
+                    gatewayTransactionId: null,
+
+                    razorpayOrderId: razorpayOrder.id,
+
+                    razorpaySignature: null,
+
+                    amount: payableAmount,
+
+                    status: 'INITIATED',
+
+                    purpose,
+
+                    responseCode: null,
+
+                    rawCallback: null
+                },
+                { transaction: t }
+            );
+
+            // ---------------- COMMIT ----------------
+
+            await t.commit();
+
+            return res.status(200).json({
+                success: true,
+                message: 'Order created successfully',
+                data: {
+                    orderId:
+                        purpose === 'recharge'
+                            ? orderId
+                            : walletOrderId,
+
+                    razorpayOrderId: razorpayOrder.id,
+
+                    razorpayOrder
+                }
+            });
+
+        } catch (error) {
+
+            await t.rollback();
+
+            console.error('Transaction Error:', error);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Database transaction failed'
+            });
+        }
+
     } catch (error) {
-        await t.rollback();
-        console.error(error);
-        console.log(error)
-        return res.status(500).json({ success: false, message: 'Payment initiation failed' });
+
+        console.error('Payment Error:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Payment initiation failed'
+        });
     }
 };
+```
+
 exports.verifyPayment = async (req, res) => {
 
 
