@@ -304,7 +304,6 @@ exports.payRequest = async (req, res) => {
         });
     }
 };
-```
 
 exports.verifyPayment = async (req, res) => {
 
