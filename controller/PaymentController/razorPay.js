@@ -128,7 +128,7 @@ exports.payRequest = async (req, res) => {
                 finalAmount = amount - discountAmount;
             }
 
-            finalAmount = Math.ceil(finalAmount * 10) / 10;
+            finalAmount = Math.trunc(finalAmount * 10) / 10;
 
             if (Number(discountedAmount) !== Number(finalAmount)) {
                 return res.status(200).json({
@@ -159,7 +159,7 @@ exports.payRequest = async (req, res) => {
         // NO TRANSACTION BEFORE THIS
 
         const razorpayOrder = await razorpay.orders.create({
-            amount: Number(payableAmount) * 100,
+            amount: Math.round(Number(payableAmount) * 100),
             currency: 'INR',
             receipt: receiptId
         });
@@ -297,7 +297,7 @@ exports.payRequest = async (req, res) => {
     } catch (error) {
 
         console.error('Payment Error:', error);
-
+        console.log(error)
         return res.status(500).json({
             success: false,
             message: 'Payment initiation failed'
