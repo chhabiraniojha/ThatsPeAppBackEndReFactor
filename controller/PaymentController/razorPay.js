@@ -128,7 +128,10 @@ exports.payRequest = async (req, res) => {
                 finalAmount = amount - discountAmount;
             }
 
-            finalAmount = Math.trunc(finalAmount * 10) / 10;
+            // finalAmount = Math.trunc(finalAmount * 10) / 10;
+            finalAmount =
+
+                (Math.trunc(finalAmount * 100) / 100).toFixed(2);
 
             if (Number(discountedAmount) !== Number(finalAmount)) {
                 return res.status(200).json({
