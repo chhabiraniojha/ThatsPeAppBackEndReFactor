@@ -470,7 +470,7 @@ exports.rechargeAndBillPaymentsViaUpi = async (req, res) => {
       beDiscountedAmount = amount - discountValue;
     }
 
-    beDiscountedAmount = Math.ceil(beDiscountedAmount * 10) / 10;
+    beDiscountedAmount = (Math.trunc(beDiscountedAmount * 100) / 100).toFixed(2);
 
     if (Number(beDiscountedAmount) !== Number(discountedAmount)) {
       return res.status(200).json({
@@ -624,7 +624,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
       beDiscountedAmount = amount - discountValue;
     }
 
-    beDiscountedAmount = Math.ceil(beDiscountedAmount * 10) / 10;
+    beDiscountedAmount = (Math.trunc(beDiscountedAmount * 100) / 100).toFixed(2);
     // console.log("beDiscountedAmount", beDiscountedAmount);  
 
     if (Number(beDiscountedAmount) !== Number(discountedAmount)) {
