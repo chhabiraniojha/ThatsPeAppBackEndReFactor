@@ -14,7 +14,7 @@ exports.rechargeExchange = async (data) => {
       params: rechargeExchangeParams,
       timeout: 7000 // ⏱️ mandatory
     });
-
+    console.log(response)
     const vendorStatus = response?.data?.status;
 
     if (vendorStatus === 'SUCCESS') {
