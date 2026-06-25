@@ -50,6 +50,7 @@ const mobikwikTokenGenerate = async () => {
                 clientSecret: process.env.MOBIKWIK_CLIENT_SECRET
             }
         );
+        console.log(response)
         if (!response.data.success) {
             throw new Error(
                 response.data.message?.text || "Token generation failed"
