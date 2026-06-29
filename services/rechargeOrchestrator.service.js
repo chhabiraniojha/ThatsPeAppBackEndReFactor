@@ -14,6 +14,7 @@ const circleModel = require('../models/CircleDataModel/circleData');
 const roboticsRechargeService = require('./recharge/roboticRecharge');
 const rechargeExchangeService = require('./recharge/rechargeExchangeRecharge');
 const a1RechargeService = require('./recharge/a1Recharge');
+const mobikwikService = require("./mobikwikServices/mobikwik.service")
 
 async function processRecharge({
   userId,
@@ -30,6 +31,7 @@ async function processRecharge({
   cashPaymentTransactionId = null,
   walletPaymentTransactionId = null,
 }) {
+  console.log("recharge orcastration heated")
   /* --------------------------------------------------
      STEP 0: FETCH OPERATOR & CIRCLE
   -------------------------------------------------- */
@@ -43,8 +45,8 @@ async function processRecharge({
 
   const circleData = ezytmCircleCode
     ? await circleModel.findOne({
-        where: { ezytm_circle_code: ezytmCircleCode }
-      })
+      where: { ezytm_circle_code: ezytmCircleCode }
+    })
     : null;
 
   /* --------------------------------------------------
@@ -88,7 +90,64 @@ async function processRecharge({
     rechargeTransactionId: rechargeTransaction.id,
     status: 'PROCESSING'
   });
+  /* --------------------------------------------------
+     STEP 3: MOBIKWIK BBPS SUBCATEGORY
+  -------------------------------------------------- */
 
+  if (subCategoryId === "SAXYftzsGoaXY1iJ2Qq4VB") {
+
+    const result = await mobikwikService.payBill({
+      customerNo,
+      amount,
+      operatorCode: operatorData.mobi_operator_code,
+      circleCode:operatorData.mobi_cir_code,
+      rechargeTransactionId: rechargeTransaction.id
+    });
+
+    if (result.status === "SUCCESS") {
+      await updateRechargeTransactionStatus({
+        rechargeTransactionId: rechargeTransaction.id,
+        status: "SUCCESS",
+        apiName: "mobikwik"
+      });
+
+      return {
+        status: "SUCCESS",
+        provider: "mobikwik",
+        rechargeTransactionId: rechargeTransaction.id
+      };
+    }
+
+    if (result.status === "PENDING") {
+      await updateRechargeTransactionStatus({
+        rechargeTransactionId: rechargeTransaction.id,
+        status: "PENDING",
+        apiName: "mobikwik"
+      });
+
+      return {
+        status: "PENDING",
+        provider: "mobikwik",
+        rechargeTransactionId: rechargeTransaction.id
+      };
+    }
+
+    // FAILED
+    await updateRechargeTransactionStatus({
+      rechargeTransactionId: rechargeTransaction.id,
+      status: "FAILED",
+      apiName: "mobikwik"
+    });
+
+    await refundWallet({
+      rechargeTransactionId: rechargeTransaction.id
+    });
+
+    return {
+      status: "FAILED",
+      rechargeTransactionId: rechargeTransaction.id
+    };
+  }
   /* --------------------------------------------------
      STEP 3: VENDOR MAP (EASYTM → VENDOR)
   -------------------------------------------------- */
@@ -172,7 +231,7 @@ async function processRecharge({
   });
 
   // refund process starts here
-    await refundWallet({rechargeTransactionId: rechargeTransaction.id});
+  await refundWallet({ rechargeTransactionId: rechargeTransaction.id });
 
 
   return {
@@ -205,32 +264,32 @@ async function processRechargeForWallet({
 
   const circleData = ezytmCircleCode
     ? await circleModel.findOne({
-        where: { ezytm_circle_code: ezytmCircleCode }
-      })
+      where: { ezytm_circle_code: ezytmCircleCode }
+    })
     : null;
-  console.log("circleData is..................................."+circleData);
-  
+  console.log("circleData is..................................." + circleData);
+
   /* --------------------------------------------------
      STEP 1: CREATE / FETCH RECHARGE TRANSACTION
      (IDEMPOTENT)
   -------------------------------------------------- */
 
-  
+
   /* --------------------------------------------------
      STEP 2: WALLET DEBIT (ONLY ONCE)      
   -------------------------------------------------- */
 
 
-  
 
-    const walletPaymentTransaction = await debitWalletForRecharge({
-      userId,
-      amount: discountedAmount,
-      rechargeTypeId: subCategoryId,
-    });
 
-    console.log("debitWalletForRecharge called--------",walletPaymentTransaction);
-  
+  const walletPaymentTransaction = await debitWalletForRecharge({
+    userId,
+    amount: discountedAmount,
+    rechargeTypeId: subCategoryId,
+  });
+
+  console.log("debitWalletForRecharge called--------", walletPaymentTransaction);
+
   const rechargeTransaction = await createRechargeTransaction({
     userId,
     customerNo,
@@ -354,7 +413,7 @@ async function processRechargeForWallet({
   });
 
   // refund process starts here
-    await refundWallet({rechargeTransactionId: rechargeTransaction.id});
+  await refundWallet({ rechargeTransactionId: rechargeTransaction.id });
 
 
   return {
