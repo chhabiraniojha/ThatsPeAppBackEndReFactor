@@ -100,7 +100,7 @@ async function processRecharge({
       customerNo,
       amount,
       operatorCode: operatorData.mobi_operator_code,
-      circleCode:operatorData.mobi_cir_code,
+      circleCode: operatorData.mobi_cir_code,
       rechargeTransactionId: rechargeTransaction.id
     });
 
@@ -328,7 +328,64 @@ async function processRechargeForWallet({
     rechargeTransactionId: rechargeTransaction.id,
     status: 'PROCESSING'
   });
+/* --------------------------------------------------
+    STEP 3: MOBIKWIK BBPS SUBCATEGORY
+  -------------------------------------------------- */
 
+  if (subCategoryId === "SAXYftzsGoaXY1iJ2Qq4VB") {
+
+    const result = await mobikwikService.payBill({
+      customerNo,
+      amount,
+      operatorCode: operatorData.mobi_operator_code,
+      circleCode: operatorData.mobi_cir_code,
+      rechargeTransactionId: rechargeTransaction.id
+    });
+
+    if (result.status === "SUCCESS") {
+      await updateRechargeTransactionStatus({
+        rechargeTransactionId: rechargeTransaction.id,
+        status: "SUCCESS",
+        apiName: "mobikwik"
+      });
+
+      return {
+        status: "SUCCESS",
+        provider: "mobikwik",
+        rechargeTransactionId: rechargeTransaction.id
+      };
+    }
+
+    if (result.status === "PENDING") {
+      await updateRechargeTransactionStatus({
+        rechargeTransactionId: rechargeTransaction.id,
+        status: "PENDING",
+        apiName: "mobikwik"
+      });
+
+      return {
+        status: "PENDING",
+        provider: "mobikwik",
+        rechargeTransactionId: rechargeTransaction.id
+      };
+    }
+
+    // FAILED
+    await updateRechargeTransactionStatus({
+      rechargeTransactionId: rechargeTransaction.id,
+      status: "FAILED",
+      apiName: "mobikwik"
+    });
+
+    await refundWallet({
+      rechargeTransactionId: rechargeTransaction.id
+    });
+
+    return {
+      status: "FAILED",
+      rechargeTransactionId: rechargeTransaction.id
+    };
+  }
   /* --------------------------------------------------
      STEP 4: VENDOR MAP (EASYTM → VENDOR)
   -------------------------------------------------- */
