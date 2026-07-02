@@ -200,10 +200,12 @@ exports.planCheckV2 = async (req, res) => {
         const cirId=circleData.dataValues.mobikwik_circle_code;
 
         const fetchPlan = await axios.get(`https://rapi-b2b.mobikwik.com/recharge/v1/rechargePlansAPI/${opId}/${cirId}`)
-        return res.status(200).json(fetchPlan)
+    
+        return res.status(200).json(fetchPlan.data)
         
         
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ message: "Internal Server Erro", error })
     }
 }
