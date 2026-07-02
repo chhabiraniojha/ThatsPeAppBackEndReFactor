@@ -204,7 +204,7 @@ exports.planCheckV2 = async (req, res) => {
             {
                 headers: {
                     "Content-Type": "application/json",
-                    "X-MClient": process.env.MOBIKWIK_CLIENT_ID // or your client ID
+                    "X-MClient": 14// or your client ID
                 }
             }
         );
