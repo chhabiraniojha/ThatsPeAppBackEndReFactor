@@ -11,7 +11,7 @@ const { log } = require('../../util/logData')
 const OperatorData = require('../../models/OperatorDataModel/operatorData')
 
 const CACHE_TTL = 43200; // 5 minutes
- 
+
 
 exports.mobileRechargeAPI = async (req, res) => {
     const { apiName, apiURL, api_Airtel_Commission, api_Jio_Commission, api_BSNL_Commission, api_Vi_Commission, Circle, apiLocation, DistributorName, DistributorContactNumber, DistributorAddress, Airtel, Jio, BSNL, Vi } = req.body
@@ -142,7 +142,7 @@ exports.rOfferCheck = async (req, res) => {
 }
 
 exports.planCheck = async (req, res) => {
-    const pubClient = await getRedisClient(); 
+    const pubClient = await getRedisClient();
     try {
         const { circleCode, operatorCode } = req.query
         const cacheKey = `plans:${circleCode}:${operatorCode}`;
@@ -185,25 +185,33 @@ exports.planCheckV2 = async (req, res) => {
         // if (cached) {
         //     return res.json({ planDataDetails: JSON.parse(cached), status: '4', cached: true });
         // }
-        const operatorData=await OperatorData.findOne({
+        const operatorData = await OperatorData.findOne({
             where: {
-                ezytm_operator_code:operatorCode
+                ezytm_operator_code: operatorCode
             }
         })
-        const opId=operatorData.dataValues.mobi_operator_code;
-          const circleData=await circleDataModel.findOne({
+        const opId = operatorData.dataValues.mobi_operator_code;
+        const circleData = await circleDataModel.findOne({
             where: {
-                ezytm_circle_code:circleCode
+                ezytm_circle_code: circleCode
             }
         })
 
-        const cirId=circleData.dataValues.mobikwik_circle_code;
+        const cirId = circleData.dataValues.mobikwik_circle_code;
 
-        const fetchPlan = await axios.get(`https://rapi-b2b.mobikwik.com/recharge/v1/rechargePlansAPI/${opId}/${cirId}`)
-    
+        const fetchPlan = await axios.get(
+            `https://rapi-b2b.mobikwik.com/recharge/v1/rechargePlansAPI/${opId}/${cirId}`,
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-MClient": process.env.MOBIKWIK_CLIENT_ID // or your client ID
+                }
+            }
+        );
+
         return res.status(200).json(fetchPlan.data)
-        
-        
+
+
     } catch (error) {
         console.log(error)
         return res.status(500).json({ message: "Internal Server Erro", error })
