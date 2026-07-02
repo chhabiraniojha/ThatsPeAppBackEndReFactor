@@ -10,6 +10,7 @@ router.post('/test-api', mobileRechargeController.testApis)
 router.get('/get-circle-operator-data', mobileRechargeController.getCircleAndOperator)
 router.get('/get-roffer-data', mobileRechargeController.rOfferCheck)
 router.get('/plancheck', mobileRechargeController.planCheck)
+router.get('/plancheck/v2', mobileRechargeController.planCheckV2)
 router.get('/get-recharge-details-by-mobileno', mobileRechargeController.getRechargeDetailsByMobileNumber)
 
 module.exports = router

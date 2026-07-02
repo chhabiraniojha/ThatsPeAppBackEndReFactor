@@ -8,6 +8,7 @@ const { Transaction } = require('sequelize')
 const uidgenerate = require('../../util/uidGenerator')
 const { getRedisClient } = require('../../util/redisClient');
 const { log } = require('../../util/logData')
+const OperatorData = require('../../models/OperatorDataModel/operatorData')
 
 const CACHE_TTL = 43200; // 5 minutes
  
@@ -166,6 +167,42 @@ exports.planCheck = async (req, res) => {
                 return res.json({ planDataDetails, status: '4' })
             }
         }
+    } catch (error) {
+        return res.status(500).json({ message: "Internal Server Erro", error })
+    }
+}
+exports.planCheckV2 = async (req, res) => {
+    // const pubClient = await getRedisClient(); 
+    console.log("hitted")
+
+    try {
+        const { circleCode, operatorCode } = req.query
+        // const cacheKey = `plans:${circleCode}:${operatorCode}`;
+
+
+        // const cached = await pubClient.get(cacheKey);
+
+        // if (cached) {
+        //     return res.json({ planDataDetails: JSON.parse(cached), status: '4', cached: true });
+        // }
+        const operatorData=await OperatorData.findOne({
+            where: {
+                ezytm_operator_code:operatorCode
+            }
+        })
+        const opId=operatorData.dataValues.mobi_operator_code;
+          const circleData=await circleDataModel.findOne({
+            where: {
+                ezytm_circle_code:circleCode
+            }
+        })
+
+        const cirId=circleData.dataValues.mobikwik_circle_code;
+
+        const fetchPlan = await axios.get(`https://rapi-b2b.mobikwik.com/recharge/v1/rechargePlansAPI/${opId}/${cirId}`)
+        return res.status(200).json(fetchPlan)
+        
+        
     } catch (error) {
         return res.status(500).json({ message: "Internal Server Erro", error })
     }
