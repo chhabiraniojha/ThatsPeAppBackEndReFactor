@@ -28,6 +28,14 @@ const PaymentGateway = sequelize.define('PaymentGateway', {
   priority: {
     type: DataTypes.STRING,
     allowNull: false
+  },
+  key: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  secret: {
+    type: DataTypes.STRING,
+    allowNull: false
   }
 });
 module.exports = PaymentGateway;

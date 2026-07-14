@@ -7,6 +7,7 @@ const Authenticate = require('../../middelWare/auth')
 router.post('/create-order', Authenticate, razorpayPaymentController.payRequest);
 router.post('/verify-payment', Authenticate, razorpayPaymentController.verifyPayment);
 router.all('/webhook', razorpayPaymentController.webhook);
+router.get('/razorpay-key', razorpayPaymentController.razorPayKey);
 // router.all('/payment-status-check', Authenticate,razorpayPaymentController.paymentStatusCheck);  
 // router.all('/order-status-check', Authenticate,razorpayPaymentController.orderStatusCheck);  
 

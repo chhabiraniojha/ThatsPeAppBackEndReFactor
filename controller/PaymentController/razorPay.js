@@ -8,6 +8,7 @@ const UIDGenerator = require('../../util/uidGenerator');
 const operatorModel = require('../../models/OperatorDataModel/operatorData');
 const walletOrderModel = require('../../models/OrderModel/walletOrder');
 const walletModel = require('../../models/WalletModels/WalletSchema/wallet');
+const PaymentGatewayModel = require('../../models/PayentGatway/paymentGatway')
 const walletController = require('../../controller/WalletController/wallet');
 const successHTML = require('../../templates/paymentSuccess');
 const failureHTML = require('../../templates/paymentFailed');
@@ -753,5 +754,30 @@ exports.orderStatusCheck = async (req, res) => {
     } catch (error) {
         // console.error('Order Status Check Error:', error);
         return res.status(500).json({ error, message: 'Internal Server Error' });
+    }
+};
+
+exports.razorPayKey = async (req, res) => {
+
+    try {
+
+       const razorPayGatewayData=await PaymentGatewayModel.findOne(
+        {
+            where:{
+                name:"razorpay"
+            }
+        }
+       ) 
+       return res.status(200).json({
+        success:true,
+        razorpay_key:razorPayGatewayData.dataValues.key
+       })
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: 'key fetching failed'
+        });
     }
 };
