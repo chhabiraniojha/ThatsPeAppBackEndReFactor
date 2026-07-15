@@ -111,17 +111,6 @@ exports.rechargeExchangeCallback = async (req, res) => {
           apiResponse: 'FAILURE'
         }
       );
-      const allTransactionRecord = await AllTransactionsModel.findByPk(yourtransid);
-      //   console.log('All Transaction Record:', allTransactionRecord.dataValues);
-
-      const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
-      //   console.log('Payment Record:', PaymentRecord?.dataValues);
-      if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
-
-        const updateOrderStatus = await OrderModel.update({ status: 'FAILED' }, { where: { id: PaymentRecord.dataValues.orderId } });
-
-        // console.log('Order Status Updated:', updateOrderStatus);
-      }
       return res.status(200).json({ message: 'Transaction updated' });
     } else if (status == 'SUCCESS') {
       const updateTransationStatus = await axios.post(
@@ -131,17 +120,6 @@ exports.rechargeExchangeCallback = async (req, res) => {
           apiResponse: 'SUCCESS'
         }
       );
-      const allTransactionRecord = await AllTransactionsModel.findByPk(yourtransid);
-      //   console.log('All Transaction Record:', allTransactionRecord.dataValues);
-
-      const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
-      //   console.log('Payment Record:', PaymentRecord?.dataValues);
-      if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
-
-        const updateOrderStatus = await OrderModel.update({ status: 'SUCCESS' }, { where: { id: PaymentRecord.dataValues.orderId } });
-
-        // console.log('Order Status Updated:', updateOrderStatus);
-      }
       return res.status(200).json({ message: 'Transaction updated' });
     }
   } catch (error) {
