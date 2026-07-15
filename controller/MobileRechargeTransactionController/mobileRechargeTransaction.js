@@ -20,7 +20,7 @@ exports.initiateRecharge = async (req, res) => {
             const apiTransactionId = null
             try {
                 if ((status == 'pending' || status == 'success' || status == 'failed') && (paymentTransactionType == 'cash' || paymentTransactionType == 'wallet')) {
-                     console.log("Request Body for initiateRecharge transcation:", req.body)
+                    console.log("Request Body for initiateRecharge transcation:", req.body)
 
                     const rechargeTransaction = await rechargeAndBillPaymentTransationModel.create({ id, userId, apiId, amount, discountedAmount, operator, circle, customerNo, status, cashPaymentTransactionId, walletPaymentTransactionId, paymentTransactionType, apiTransactionId, subCategoryId, circleCode, operatorCode })
                     res.status(200).json({ message: "Transaction intiated sucessfully ", success: true, statuscode: 1, rechargeTransaction })
@@ -41,35 +41,63 @@ exports.initiateRecharge = async (req, res) => {
 exports.updateTransactionStatus = async (req, res) => {
     const { rechargeTransactionId, apiResponse, apiId } = req.body
     try {
-        console.log("Update Transaction Status Request Body--- xxxxxxxxxxxxxxx :", req.body)
-        // const apiData=await avelablleAPIsModel.findOne({ where: { name: apiId } })
-        // if(!apiData){
-        //     return res.status(200).json({ message: "Invalid API ID", success: false });
-        // }
-        //ENUM('CREATED', 'PROCESSING', 'SUCCESS', 'FAILED', 'PENDING')
-        
         const rechargeTransaction = await rechargeAndBillPaymentTransationModel.findOne({ where: { id: rechargeTransactionId } })
         if (!rechargeTransaction) {
-             return res.status(201).json({ message: "No transaction found", success: false })
-        } else {
-            if (apiResponse == "FAILURE") {     
-                console.log("Recharge failed due to some error-----------------------");
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'FAILED'   })
-              return  res.status(202).json({ message: "Recharge failed due to some error", success: false, rechargeTransactionUpdate })
-            } 
-            if(apiResponse == "PENDING") {
-                console.log("Recharge is pending-----------------------");
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'PENDING'  })
-                return res.status(200).json({ message: "Recharge Pending", success: false, rechargeTransactionUpdate })
-            }
-             if(apiResponse == "SUCCESS") {
-                console.log("Recharge successful-----------------------");  
-                const rechargeTransactionUpdate = await rechargeTransaction.update({ status: 'SUCCESS'})
-               return  res.status(200).json({ message: "Recharge successful", success: true, rechargeTransactionUpdate })
-            }
+            return res.status(200).json({ success: false, message: "No transaction found" })
         }
+        if (apiResponse == "FAILURE") {
+            const rechargeTransactionUpdate = await rechargeAndBillPaymentTransationModel.update(
+                {
+                    status: 'FAILED',
+                },
+                {
+                    where: {
+                        id: rechargeTransactionId,
+                        status: 'PENDING'
+                    }
+                }
+            )
+            const affectedPaymentRows = Array.isArray(rechargeTransactionUpdate) ? rechargeTransactionUpdate[0] : rechargeTransactionUpdate;
+            // console.log('Affected payment rows:', affectedPaymentRows);
+            // bypassing these for testing-----
+            if (affectedPaymentRows === 0) {
+                return res.status(200).json(
+                    {
+                        success: false,
+                        message: "transaction is not in pending state",
+                    })
+            };
+
+            return res.status(200).json({ success: true, message: "transaction updated to FAILED" })
+        }
+        if (apiResponse == "SUCCESS") {
+            const rechargeTransactionUpdate = await rechargeAndBillPaymentTransationModel.update(
+                {
+                    status: 'SUCCESS',
+                },
+                {
+                    where: {
+                        id: rechargeTransactionId,
+                        status: 'PENDING'
+                    }
+                }
+            )
+            const affectedPaymentRows = Array.isArray(rechargeTransactionUpdate) ? rechargeTransactionUpdate[0] : rechargeTransactionUpdate;
+            // console.log('Affected payment rows:', affectedPaymentRows);
+            // bypassing these for testing-----
+            if (affectedPaymentRows === 0) {
+                return res.status(200).json(
+                    {
+                        success: false,
+                        message: "transaction is not in pending state",
+                    })
+            };
+
+            return res.status(200).json({ success: true, message: "transaction updated to SUCCESS" })
+        }
+
     } catch (error) {
-       return res.status(500).json({ message: "Internal Server Error", success: false ,error})
+        return res.status(500).json({ message: "Internal Server Error", success: false, error })
     }
 }
 
