@@ -53,6 +53,22 @@ exports.a1RechargeCallback = async (req, res) => {
           },
         }
       );
+      const findTransaction = await AllTransactionsModel.findByPk(txid);
+
+      if (findTransaction.dataValues.paymentTransactionType === "cash") {
+
+        const findPaymentRecord = await PaymentModel.findByPk(
+          findTransaction.cashPaymentTransactionId
+        );
+        await OrderModel.update(
+          { status: "SUCCESS" },
+          {
+            where: {
+              id: findPaymentRecord.orderId,
+            },
+          }
+        );
+      }
 
 
       return res.status(200).json({
@@ -91,6 +107,22 @@ exports.a1RechargeCallback = async (req, res) => {
         await refundWallet({
           rechargeTransactionId: txid,
         });
+        const findTransaction = await AllTransactionsModel.findByPk(txid);
+
+        if (findTransaction.dataValues.paymentTransactionType === "cash") {
+
+          const findPaymentRecord = await PaymentModel.findByPk(
+            findTransaction.cashPaymentTransactionId
+          );
+          await OrderModel.update(
+            { status: "FAILED" },
+            {
+              where: {
+                id: findPaymentRecord.orderId,
+              },
+            }
+          );
+        }
       }
     }
     return res.status(200).json({
@@ -112,6 +144,8 @@ exports.a1RechargeCallback = async (req, res) => {
     });
   }
 };
+
+
 
 exports.roboticsExchangeCallback = async (req, res) => {
   const { txnid, status, operatorid, message } = req.query;
@@ -145,6 +179,22 @@ exports.roboticsExchangeCallback = async (req, res) => {
           },
         }
       );
+      const findTransaction = await AllTransactionsModel.findByPk(txnid);
+
+      if (findTransaction.dataValues.paymentTransactionType === "cash") {
+
+        const findPaymentRecord = await PaymentModel.findByPk(
+          findTransaction.cashPaymentTransactionId
+        );
+        await OrderModel.update(
+          { status: "SUCCESS" },
+          {
+            where: {
+              id: findPaymentRecord.orderId,
+            },
+          }
+        );
+      }
 
       return res.status(200).json({
         success: true,
@@ -185,6 +235,22 @@ exports.roboticsExchangeCallback = async (req, res) => {
         await refundWallet({
           rechargeTransactionId: txnid,
         });
+        const findTransaction = await AllTransactionsModel.findByPk(txnid);
+
+        if (findTransaction.dataValues.paymentTransactionType === "cash") {
+
+          const findPaymentRecord = await PaymentModel.findByPk(
+            findTransaction.cashPaymentTransactionId
+          );
+          await OrderModel.update(
+            { status: "FAILED" },
+            {
+              where: {
+                id: findPaymentRecord.orderId,
+              },
+            }
+          );
+        }
       }
       return res.status(200).json({
         success: true,
@@ -241,7 +307,22 @@ exports.rechargeExchangeCallback = async (req, res) => {
           },
         }
       );
+      const findTransaction = await AllTransactionsModel.findByPk(yourtransid);
 
+      if (findTransaction.dataValues.paymentTransactionType === "cash") {
+
+        const findPaymentRecord = await PaymentModel.findByPk(
+          findTransaction.cashPaymentTransactionId
+        );
+        await OrderModel.update(
+          { status: "SUCCESS" },
+          {
+            where: {
+              id: findPaymentRecord.orderId,
+            },
+          }
+        );
+      }
       return res.status(200).json({
         success: true,
         message: "SUCCESS callback processed",
@@ -278,6 +359,22 @@ exports.rechargeExchangeCallback = async (req, res) => {
         await refundWallet({
           rechargeTransactionId: yourtransid,
         });
+        const findTransaction = await AllTransactionsModel.findByPk(yourtransid);
+
+        if (findTransaction.dataValues.paymentTransactionType === "cash") {
+
+          const findPaymentRecord = await PaymentModel.findByPk(
+            findTransaction.cashPaymentTransactionId
+          );
+          await OrderModel.update(
+            { status: "FAILED" },
+            {
+              where: {
+                id: findPaymentRecord.orderId,
+              },
+            }
+          );
+        }
       }
 
       return res.status(200).json({
@@ -364,13 +461,7 @@ exports.statusCheck = async (req, res) => {
 };
 
 exports.createVendorAttempts = async (req, res) => {
-  const rechargeTransactionId=req.query.rechargeTransactionId;
-
-  const findTransaction= await AllTransactionsModel.findByPk(rechargeTransactionId);
-  console.log(findTransaction.dataValues)
-  if(findTransaction.dtavalues?.paymentTransactionType==="cash"){
-      
-  }
-
+  const rechargeTransactionId = req.query.rechargeTransactionId;
+  res.status(200).json(rechargeTransactionId)
 
 };
