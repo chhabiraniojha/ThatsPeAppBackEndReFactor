@@ -100,7 +100,7 @@ exports.a1Recharge = async (data) => {
               timeout: 20000,
             }
           );
-
+          console.log('A1 status response is ---------------------------',statusResponse.data)
           const status = String(
             statusResponse?.data?.Status ||
             statusResponse?.data?.status ||
