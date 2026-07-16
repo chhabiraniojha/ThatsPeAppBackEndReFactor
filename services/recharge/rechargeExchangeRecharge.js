@@ -32,7 +32,7 @@ exports.rechargeExchange = async (data) => {
       "https://api.RechargeExchange.com/API.asmx/Transaction",
       {
         params: rechargeExchangeParams,
-        timeout: 7000,
+        timeout: 20000,
       }
     );
 

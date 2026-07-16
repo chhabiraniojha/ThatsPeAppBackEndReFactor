@@ -32,7 +32,7 @@ exports.a1Recharge = async (data) => {
       "https://business.a1topup.com/recharge/api",
       {
         params: a1Params,
-        timeout: 7000,
+        timeout: 20000,
       }
     );
 
@@ -97,7 +97,7 @@ exports.a1Recharge = async (data) => {
                 orderid: data.rechargeTransactionId,
                 format: "json",
               },
-              timeout: 7000,
+              timeout: 20000,
             }
           );
 

@@ -32,7 +32,7 @@ exports.roboticRecharge = async (data) => {
       "https://api.roboticexchange.in/Robotics/webservice/GetMobileRecharge",
       {
         params: roboticsParams,
-        timeout: 7000,
+        timeout: 20000,
       }
     );
 
@@ -91,7 +91,7 @@ exports.roboticRecharge = async (data) => {
                 Api_password: process.env.ROBOTICS_PASSWORD,
                 Member_request_txnid: data.rechargeTransactionId,
               },
-              timeout: 7000,
+              timeout: 20000,
             }
           );
 

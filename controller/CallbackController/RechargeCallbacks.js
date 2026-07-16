@@ -54,6 +54,7 @@ exports.a1RechargeCallback = async (req, res) => {
         }
       );
 
+
       return res.status(200).json({
         success: true,
         message: "SUCCESS callback processed",
@@ -363,7 +364,13 @@ exports.statusCheck = async (req, res) => {
 };
 
 exports.createVendorAttempts = async (req, res) => {
-  return res.status(200).json("ok")
+  const rechargeTransactionId=req.query.rechargeTransactionId;
+
+  const findTransaction= await AllTransactionsModel.findByPk(rechargeTransactionId);
+  console.log(findTransaction.dataValues)
+  if(findTransaction.dtavalues?.paymentTransactionType==="cash"){
+      
+  }
 
 
 };
