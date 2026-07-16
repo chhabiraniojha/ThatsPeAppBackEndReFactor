@@ -123,9 +123,8 @@ async function refundWallet({ rechargeTransactionId }) {
       throw new Error('WALLET_NOT_FOUND');
     }
 
-    const refundAmount = rechargeTxn.discountedAmount;
-
-    const startingBalance = wallet.amount;
+    const startingBalance = Number(wallet.amount);
+    const refundAmount = Number(rechargeTxn.discountedAmount);
 
     await wallet.increment(
       { amount: refundAmount },

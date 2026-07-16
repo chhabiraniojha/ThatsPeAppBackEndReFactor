@@ -3,6 +3,15 @@ const { log } = require('../../util/logData');
 const PaymentModel = require('../../models/PaymentModel/payment');
 const AllTransactionsModel = require('../../models/RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
 const OrderModel = require('../../models/OrderModel/order');
+const RechargeTransaction = require('../../models/RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
+const sequelize = require('../../util/db_connect');
+const Wallet = require('../../models/WalletModels/WalletSchema/wallet');
+const WalletTransaction = require('../../models/WalletModels/Wallet Transaction/walletTransaction');
+const SubCategory = require('../../models/SubCategoryModel/subCategory');
+const uid = require('../../util/uidGenerator');
+
+
+
 const {
   debitWalletForRecharge,
   refundWallet
@@ -354,16 +363,7 @@ exports.statusCheck = async (req, res) => {
 };
 
 exports.createVendorAttempts = async (req, res) => {
-  const rechargeTransactionId = req.query.rechargeTransactionId;
-  //  console.log(rechargeTransactionId)
-  const api = await getApiByName("RechargeExchange");
-  
-  const attempt = await getVendorAttempt({
-            rechargeTransactionId: rechargeTransactionId,
-            apiId: api.id,
-          });
+  return res.status(200).json("ok")
 
-          const status = attempt?.status?.toUpperCase();
-  return res.status(200).json(status)
 
 };
