@@ -21,6 +21,7 @@ const WalletOrder = require('./models/OrderModel/walletOrder')
 const Payment=require('./models/PaymentModel/payment')
 const PaymentGateway=require('./models/PayentGatway/paymentGatway') 
 const OperatorFields=require("./models/OperatorDataModel/operatorFields")
+const VendorAttempt = require("./models/VendorAttemptModels/vendorAttempts")
 // Models extraction ends here
 const bodyParser = require('body-parser')
 const userRoutes = require('./routes/userRoutes/userRouter')

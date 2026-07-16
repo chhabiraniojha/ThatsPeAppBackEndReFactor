@@ -92,16 +92,17 @@ async function createRechargeTransaction({
  */
 async function updateRechargeTransactionStatus({
   rechargeTransactionId,
-  status, // 'SUCCESS' | 'FAILED' | 'PENDING' | 'PROCESSING'
-  apiName
+  status, // PROCESSING | PENDING | SUCCESS | FAILED
+  apiName,
 }) {
-  console.log('Updating recharge transaction status:', {
+  console.log("Updating recharge transaction status:", {
     rechargeTransactionId,
     status,
-    apiName
+    apiName,
   });
+
   if (!rechargeTransactionId || !status) {
-    throw new Error('INVALID_STATUS_UPDATE_INPUT');
+    throw new Error("INVALID_STATUS_UPDATE_INPUT");
   }
 
   const rechargeTransaction = await RechargeTransaction.findByPk(
@@ -109,38 +110,69 @@ async function updateRechargeTransactionStatus({
   );
 
   if (!rechargeTransaction) {
-    throw new Error('RECHARGE_TRANSACTION_NOT_FOUND');
+    throw new Error("RECHARGE_TRANSACTION_NOT_FOUND");
   }
 
-  /* -------------------- FINAL STATE GUARD -------------------- */
-  if (['SUCCESS', 'FAILED', 'PENDING'].includes(rechargeTransaction.status)) {
+  /* --------------------------------------------------
+     FINAL STATE GUARD
+     SUCCESS and FAILED are terminal.
+     PENDING is NOT terminal because callbacks may
+     change it to SUCCESS or FAILED.
+  -------------------------------------------------- */
+
+  if (
+    rechargeTransaction.status === "SUCCESS" ||
+    rechargeTransaction.status === "FAILED"
+  ) {
     return rechargeTransaction;
   }
 
-  // 🔒 PROCESSING → no API binding
-  if (status === 'PROCESSING') {
+  /* --------------------------------------------------
+     PROCESSING
+  -------------------------------------------------- */
+
+  if (status === "PROCESSING") {
     await rechargeTransaction.update({
-      status
+      status: "PROCESSING",
     });
+
     return rechargeTransaction;
   }
 
-  // 🔒 For SUCCESS / FAILED / PENDING → apiName is mandatory
+  /* --------------------------------------------------
+     SUCCESS / FAILED / PENDING REQUIRE API
+  -------------------------------------------------- */
+
   if (!apiName) {
-    throw new Error('API_NAME_REQUIRED_FOR_FINAL_STATUS');
+    throw new Error("API_NAME_REQUIRED_FOR_FINAL_STATUS");
   }
 
   const api = await AvailableAPIs.findOne({
-    where: { name: apiName }
+    where: {
+      name: apiName,
+    },
   });
 
   if (!api) {
-    throw new Error('INVALID_API_NAME');
+    throw new Error("INVALID_API_NAME");
   }
+
+  /* --------------------------------------------------
+     VALID STATE TRANSITIONS
+
+     CREATED    -> PROCESSING
+
+     PROCESSING -> SUCCESS
+     PROCESSING -> FAILED
+     PROCESSING -> PENDING
+
+     PENDING    -> SUCCESS   (late callback)
+     PENDING    -> FAILED    (late callback)
+  -------------------------------------------------- */
 
   await rechargeTransaction.update({
     status,
-    apiTransactionId: api.id
+    apiTransactionId: api.id,
   });
 
   return rechargeTransaction;

@@ -1,85 +1,166 @@
-const axios = require('axios');
-const AllTransactionsModel = require('../../models/RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
+const axios = require("axios");
+
+const {
+  getApiByName,
+  createVendorAttempt,
+  updateVendorAttempt,
+  getVendorAttempt,
+} = require("../vendorAttemptServices/vendorAttemptService");
 
 exports.rechargeExchange = async (data) => {
+  let api;
+
   try {
+    api = await getApiByName("RechargeExchange");
+
+    // Create vendor attempt
+    await createVendorAttempt({
+      rechargeTransactionId: data.rechargeTransactionId,
+      apiId: api.id,
+    });
+
     const rechargeExchangeParams = {
       userid: process.env.RECHARGEEXCHANGE_USERNAME,
       token: process.env.RECHARGEEXCHANGE_PASSWORD,
       opcode: data.operatorCode,
       number: data.customer_number,
       amount: data.amount,
-      transid: data.rechargeTransactionId
+      transid: data.rechargeTransactionId,
     };
-    const response = await axios.get('https://api.RechargeExchange.com/API.asmx/Transaction', {
-      params: rechargeExchangeParams,
-      timeout: 7000 // ⏱️ mandatory
-    });
-    const vendorStatus = response?.data?.status?.toUpperCase();
 
-    if (vendorStatus === 'SUCCESS') {
+    const response = await axios.get(
+      "https://api.RechargeExchange.com/API.asmx/Transaction",
+      {
+        params: rechargeExchangeParams,
+        timeout: 7000,
+      }
+    );
+
+    const vendorStatus = String(
+      response?.data?.status || ""
+    ).toUpperCase();
+
+    /* ---------------- SUCCESS ---------------- */
+
+    if (vendorStatus === "SUCCESS") {
+
+      await updateVendorAttempt({
+        rechargeTransactionId: data.rechargeTransactionId,
+        apiId: api.id,
+        status: "SUCCESS",
+        vendorTransactionId: response.data.optransid || null,
+        rawResponse: response.data,
+        message: response.data.message || null,
+      });
+
       return {
-        status: 'SUCCESS',
-        provider: 'rechargeExchange',
-        raw: response.data
+        status: "SUCCESS",
+        provider: "RechargeExchange",
+        raw: response.data,
       };
     }
 
-    if (vendorStatus === 'PENDING') {
-      const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    /* ---------------- PENDING ---------------- */
 
-      const maxDuration = 20000; // 20 seconds
-      const interval = 5000; // check every 5 second
+    if (vendorStatus === "PENDING") {
+
+      await updateVendorAttempt({
+        rechargeTransactionId: data.rechargeTransactionId,
+        apiId: api.id,
+        status: "PENDING",
+        vendorTransactionId: response.data.optransid || null,
+        rawResponse: response.data,
+        message: response.data.message || null,
+      });
+
+      const sleep = (ms) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+
+      const maxDuration = 20000;
+      const interval = 5000;
 
       const startTime = Date.now();
 
       while (Date.now() - startTime < maxDuration) {
 
-        const transaction = await AllTransactionsModel.findByPk(data.rechargeTransactionId);
+        try {
 
-        const status = transaction.status?.toUpperCase();
+          const attempt = await getVendorAttempt({
+            rechargeTransactionId: data.rechargeTransactionId,
+            apiId: api.id,
+          });
 
-        if (status === "SUCCESS") {
-          return {
-            status: 'SUCCESS',
-            provider: 'rechargeExchange',
-            raw: transaction
-          };
-        }
+          const status = attempt?.status?.toUpperCase();
 
-        if (status === "FAILED") {
-          return {
-            status: 'FAILED',
-            provider: 'rechargeExchange',
-            raw: transaction
-          };
+          if (status === "SUCCESS") {
+            return {
+              status: "SUCCESS",
+              provider: "RechargeExchange",
+              raw: attempt,
+            };
+          }
+
+          if (status === "FAILED") {
+            return {
+              status: "FAILED",
+              provider: "RechargeExchange",
+              raw: attempt,
+            };
+          }
+
+        } catch (err) {
+
+          console.error(
+            `RechargeExchange Status Check Error (${data.rechargeTransactionId}):`,
+            err.message
+          );
+
         }
 
         await sleep(interval);
       }
 
-      // Still pending after timeout
-
-       return {
-        status: 'PENDING',
-        provider: 'rechargeExchange',
-        raw: response.data
+      return {
+        status: "PENDING",
+        provider: "RechargeExchange",
+        raw: response.data,
       };
     }
 
-    // FAIL or unknown
+    /* ---------------- FAILED ---------------- */
+
+    await updateVendorAttempt({
+      rechargeTransactionId: data.rechargeTransactionId,
+      apiId: api.id,
+      status: "FAILED",
+      vendorTransactionId: response.data.optransid || null,
+      rawResponse: response.data,
+      message: response.data.message || null,
+    });
+
     return {
-      status: 'FAILED',
-      provider: 'rechargeExchange',
-      raw: response.data
+      status: "FAILED",
+      provider: "RechargeExchange",
+      raw: response.data,
     };
+
   } catch (error) {
-    // ⚠️ exception ≠ confirmed failure
+
+    if (api) {
+      await updateVendorAttempt({
+        rechargeTransactionId: data.rechargeTransactionId,
+        apiId: api.id,
+        status: "PENDING",
+        rawResponse: error.response?.data || null,
+        message: error.message,
+      });
+    }
+
     return {
-      status: 'PENDING',
-      provider: 'rechargeExchange',
+      status: "PENDING",
+      provider: "RechargeExchange",
       raw: error.response?.data || null,
-      error: error.message
+      error: error.message,
     };
   }
 };

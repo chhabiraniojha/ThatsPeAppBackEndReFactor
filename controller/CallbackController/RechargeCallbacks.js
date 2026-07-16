@@ -3,127 +3,291 @@ const { log } = require('../../util/logData');
 const PaymentModel = require('../../models/PaymentModel/payment');
 const AllTransactionsModel = require('../../models/RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
 const OrderModel = require('../../models/OrderModel/order');
+const {
+  debitWalletForRecharge,
+  refundWallet
+} = require('../../services/walletTransaction.service');
+const {
+  getApiByName,
+  createVendorAttempt,
+  updateVendorAttempt,
+  getVendorAttempt
+} = require("../../services/vendorAttemptServices/vendorAttemptService");
+
 exports.a1RechargeCallback = async (req, res) => {
-  console.log('A1 Recharge Callback Hit', req.query);
+  const { txid, status, opid, message } = req.query;
 
-  const { txid, status, opid } = req.query;
   try {
-    if (status == 'Failure') {
-      const updateTransationStatus = await axios.post(
-        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
-        {
-          rechargeTransactionId: txid,
-          apiResponse: 'FAILURE'
-        }
-      );
-      const allTransactionRecord = await AllTransactionsModel.findByPk(txid);
-      //   console.log('All Transaction Record:', allTransactionRecord.dataValues);
+    const api = await getApiByName("A1");
 
-      const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
-      //   console.log('Payment Record:', PaymentRecord?.dataValues);
-      if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
+    if (String(status).toUpperCase() === "SUCCESS") {
 
-        const updateOrderStatus = await OrderModel.update({ status: 'FAILED' }, { where: { id: PaymentRecord.dataValues.orderId } });
-
-        // console.log('Order Status Updated:', updateOrderStatus);
-      }
-
-      const upadateTransationStatus = await axios.post(
-        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
-        {
-          rechargeTransactionId: txid,
-          apiResponse: 'FAILURE'
-        }
-      );
-
-      //   console.log('Transaction marked -------------------------:', updateTransationStatus);
-      let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
-        allTransactionId: txid
+      await updateVendorAttempt({
+        rechargeTransactionId: txid,
+        apiId: api.id,
+        status: "SUCCESS",
+        vendorTransactionId: opid || null,
+        rawResponse: req.query,
+        message: message || null,
+        callbackReceived: true,
       });
-      //   console.log(refdundData);
-      return;
-    } else if (status == 'Success') {
-      const updateTransationStatus = await axios.post(
-        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+
+      await AllTransactionsModel.update(
         {
-          rechargeTransactionId: txid,
-          apiResponse: 'SUCCESS'
+          status: "SUCCESS",
+          apiTransactionId: api.id,
+        },
+        {
+          where: {
+            id: txid,
+            status: "PENDING",
+          },
         }
       );
 
-      const allTransactionRecord = await AllTransactionsModel.findByPk(txid);
-      //   console.log('All Transaction Record:', allTransactionRecord.dataValues);
-
-      const PaymentRecord = await PaymentModel.findByPk(allTransactionRecord.dataValues.cashPaymentTransactionId);
-      //   console.log('Payment Record:', PaymentRecord?.dataValues);
-      if (allTransactionRecord.dataValues.paymentTransactionType === 'cash') {
-
-        const updateOrderStatus = await OrderModel.update({ status: 'SUCCESS' }, { where: { id: PaymentRecord.dataValues.orderId } });
-
-        // console.log('Order Status Updated:', updateOrderStatus);
-      }
-
-      //order update code here if required
-      return;
+      return res.status(200).json({
+        success: true,
+        message: "SUCCESS callback processed",
+      });
     }
+
+    if (String(status).toUpperCase() === "FAILURE") {
+
+      await updateVendorAttempt({
+        rechargeTransactionId: txid,
+        apiId: api.id,
+        status: "FAILED",
+        vendorTransactionId: opid || null,
+        rawResponse: req.query,
+        message: message || null,
+        callbackReceived: true,
+      });
+      const affected = await AllTransactionsModel.update(
+        {
+          status: "FAILED",
+          apiTransactionId: api.id
+        },
+        {
+          where: {
+            id: txid,
+            status: "PENDING"
+          }
+        }
+      );
+      const affectedRows = Array.isArray(affected) ? affected[0] : affected;
+      // console.log('Affected payment rows:', affectedPaymentRows);
+      // bypassing these for testing-----
+      if (affectedRows === 1) {
+        await refundWallet({
+          rechargeTransactionId: txid,
+        });
+      }
+    }
+    return res.status(200).json({
+      success: true,
+      message: "FAILURE callback processed",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Ignored",
+    });
+
   } catch (error) {
-    return;
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
 exports.roboticsExchangeCallback = async (req, res) => {
-  const { txnid, status, operatorid } = req.query;
+  const { txnid, status, operatorid, message } = req.query;
+
   try {
-    if (status == 3) {
-      const updateTransationStatus = await axios.post(
-        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
-        {
-          rechargeTransactionId: txnid,
-          apiResponse: 'FAILURE'
-        }
-      );
-      let refdundData = await axios.post(`${process.env.SERVER_BASEUSRL}/user/wallet/refund`, {
-        allTransactionId: txnid
+    const api = await getApiByName("RoboticsExchange");
+
+    // ---------------- SUCCESS ----------------
+
+    if (Number(status) === 1) {
+
+      await updateVendorAttempt({
+        rechargeTransactionId: txnid,
+        apiId: api.id,
+        status: "SUCCESS",
+        vendorTransactionId: operatorid || null,
+        rawResponse: req.query,
+        message: message || null,
+        callbackReceived: true,
       });
-      console.log(refdundData);
-      return res.status(200).json({ message: 'Transaction updated' });
-    } else if (status == 1) {
-      const updateTransationStatus = await axios.post(
-        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+
+      await AllTransactionsModel.update(
         {
-          rechargeTransactionId: txnid,
-          apiResponse: 'SUCCESS'
+          status: "SUCCESS",
+          apiTransactionId: api.id,
+        },
+        {
+          where: {
+            id: txnid,
+            status: "PENDING",
+          },
         }
       );
-      return res.status(200).json({ message: 'Transaction updated' });
+
+      return res.status(200).json({
+        success: true,
+        message: "SUCCESS callback processed",
+      });
     }
+
+    // ---------------- FAILURE ----------------
+
+    if (Number(status) === 3) {
+
+      await updateVendorAttempt({
+        rechargeTransactionId: txnid,
+        apiId: api.id,
+        status: "FAILED",
+        vendorTransactionId: operatorid || null,
+        rawResponse: req.query,
+        message: message || null,
+        callbackReceived: true,
+      });
+
+      // Don't update AllTransactions
+      // Don't refund wallet
+      const affected = await AllTransactionsModel.update(
+        {
+          status: "FAILED",
+          apiTransactionId: api.id
+        },
+        {
+          where: {
+            id: txnid,
+            status: "PENDING"
+          }
+        }
+      );
+      const affectedRows = Array.isArray(affected) ? affected[0] : affected;
+      if (affectedRows === 1) {
+        await refundWallet({
+          rechargeTransactionId: txnid,
+        });
+      }
+      return res.status(200).json({
+        success: true,
+        message: "FAILURE callback processed",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Ignored",
+    });
+
   } catch (error) {
-    return;
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
+
 exports.rechargeExchangeCallback = async (req, res) => {
-  const { yourtransid, status, opid } = req.query;
+  const { yourtransid, status, opid, message } = req.query;
+
   try {
-    if (status == 'FAIL') {
-      const updateTransationStatus = await axios.post(
-        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
+
+    const api = await getApiByName("RechargeExchange");
+
+    if (status === "SUCCESS") {
+
+      // Update vendor attempt
+      await updateVendorAttempt({
+        rechargeTransactionId: yourtransid,
+        apiId: api.id,
+        status: "SUCCESS",
+        vendorTransactionId: opid || null,
+        rawResponse: req.query,
+        message: message || null,
+        callbackReceived: true,
+      });
+
+      // Update main transaction
+      await AllTransactionsModel.update(
         {
-          rechargeTransactionId: yourtransid,
-          apiResponse: 'FAILURE'
+          status: "SUCCESS",
+          apiTransactionId: api.id,
+        },
+        {
+          where: {
+            id: yourtransid,
+            status: "PENDING",
+          },
         }
       );
-      return res.status(200).json({ message: 'Transaction updated' });
-    } else if (status == 'SUCCESS') {
-      const updateTransationStatus = await axios.post(
-        `${process.env.SERVER_BASEUSRL}/user/mobile-recharge-transaction/update-mobile-recharge-transaction-status`,
-        {
-          rechargeTransactionId: yourtransid,
-          apiResponse: 'SUCCESS'
-        }
-      );
-      return res.status(200).json({ message: 'Transaction updated' });
+
+      return res.status(200).json({
+        success: true,
+        message: "SUCCESS callback processed",
+      });
     }
+
+    if (status === "FAIL") {
+
+      // Update only vendor attempt
+      await updateVendorAttempt({
+        rechargeTransactionId: yourtransid,
+        apiId: api.id,
+        status: "FAILED",
+        vendorTransactionId: opid || null,
+        rawResponse: req.query,
+        message: message || null,
+        callbackReceived: true,
+      });
+
+      const affected = await AllTransactionsModel.update(
+        {
+          status: "FAILED",
+          apiTransactionId: api.id
+        },
+        {
+          where: {
+            id: yourtransid,
+            status: "PENDING"
+          }
+        }
+      );
+      const affectedRows = Array.isArray(affected) ? affected[0] : affected;
+      if (affectedRows === 1) {
+        await refundWallet({
+          rechargeTransactionId: yourtransid,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "FAIL callback processed",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Ignored",
+    });
+
   } catch (error) {
-    return;
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -187,4 +351,19 @@ exports.statusCheck = async (req, res) => {
       message: error.message
     });
   }
+};
+
+exports.createVendorAttempts = async (req, res) => {
+  const rechargeTransactionId = req.query.rechargeTransactionId;
+  //  console.log(rechargeTransactionId)
+  const api = await getApiByName("RechargeExchange");
+  
+  const attempt = await getVendorAttempt({
+            rechargeTransactionId: rechargeTransactionId,
+            apiId: api.id,
+          });
+
+          const status = attempt?.status?.toUpperCase();
+  return res.status(200).json(status)
+
 };

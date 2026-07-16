@@ -64,7 +64,7 @@ exports.intialManualRefundByAdmin = async (req, res) => {
           : statusCheckResponse?.data?.status == "FAILED"
           ? "Failed"
           : null;
-    } else if (providerData.name === "a1") {
+    } else if (providerData.name === "A1") {
       statusCheckResponse = await axios.get(
         `${providerData.statusCheckUrl}?username=${process.env.A1_USERNAME}&pwd=${process.env.A1_PASSWORD}&orderid=${transactionId}&format=json`
       );

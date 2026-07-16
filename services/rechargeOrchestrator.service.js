@@ -153,19 +153,19 @@ async function processRecharge({
   -------------------------------------------------- */
   const vendorMap = [
     {
-      name: 'roboticsExchange',
+      name: 'RoboticsExchange',
       call: roboticsRechargeService.roboticRecharge,
       operatorCode: operatorData.robotic_exchange_operator_code,
       circleCode: circleData?.robotic_exchange_circle_code
     },
     {
-      name: 'rechargeExchange',
+      name: 'RechargeExchange',
       call: rechargeExchangeService.rechargeExchange,
       operatorCode: operatorData.recharge_exchange_operator_code,
       circleCode: circleData?.recharge_exchange_circle_code
     },
     {
-      name: 'a1',
+      name: 'A1',
       call: a1RechargeService.a1Recharge,
       operatorCode: operatorData.a1_operator_code,
       circleCode: circleData?.a1_circle_code ?? ""
@@ -392,19 +392,19 @@ async function processRechargeForWallet({
   console.log("step 4 reached")
   const vendorMap = [
     {
-      name: 'roboticsExchange',
+      name: 'RoboticsExchange',
       call: roboticsRechargeService.roboticRecharge,
       operatorCode: operatorData.robotic_exchange_operator_code,
       circleCode: circleData?.robotic_exchange_circle_code
     },
     {
-      name: 'rechargeExchange',
+      name: 'RechargeExchange',
       call: rechargeExchangeService.rechargeExchange,
       operatorCode: operatorData.recharge_exchange_operator_code,
       circleCode: circleData?.recharge_exchange_circle_code
     },
     {
-      name: 'a1',
+      name: 'A1',
       call: a1RechargeService.a1Recharge,
       operatorCode: operatorData.a1_operator_code,
       circleCode: circleData?.a1_circle_code ?? ""

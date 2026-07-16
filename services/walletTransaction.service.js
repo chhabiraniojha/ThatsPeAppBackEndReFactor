@@ -45,7 +45,7 @@ async function debitWalletForRecharge({ userId, amount, rechargeTypeId = null })
     const endingBalance = Number(startingBalance) - Number(amount);
 
     const walletTxnId = await uid();
-// initiare wallet transaction
+    // initiare wallet transaction
     const walletTransaction = await WalletTransaction.create(
       {
         id: walletTxnId,
@@ -81,20 +81,37 @@ async function debitWalletForRecharge({ userId, amount, rechargeTypeId = null })
  */
 async function refundWallet({ rechargeTransactionId }) {
   return await sequelize.transaction(async (t) => {
+    const updatedRows = await RechargeTransaction.update(
+      { refundStatus: true },
+      {
+        where: {
+          id: rechargeTransactionId,
+          refundStatus: false,
+          status: 'FAILED'
+        },
+        transaction: t
+      }
+    );
+
+    const affectedOrderRows = Array.isArray(updatedRows) ? updatedRows[0] : updatedRows;
+    if (affectedOrderRows === 0) {
+      // Now determine why it failed
+      const rechargeTxn = await RechargeTransaction.findByPk(
+        rechargeTransactionId,
+        { transaction: t }
+      );
+
+      if (!rechargeTxn) {
+        throw new Error("RECHARGE_TRANSACTION_NOT_FOUND");
+      }
+
+      if (rechargeTxn.status !== "FAILED") {
+        throw new Error("RECHARGE_NOT_FAILED");
+      }
+
+      return { refunded: true }; // Already refunded or not eligible
+    }
     const rechargeTxn = await RechargeTransaction.findByPk(rechargeTransactionId, { transaction: t });
-
-    if (!rechargeTxn) {
-      throw new Error('RECHARGE_TRANSACTION_NOT_FOUND');
-    }
-
-    if (rechargeTxn.status !== 'FAILED') {
-      throw new Error('RECHARGE_NOT_FAILED');
-    }
-
-    if (rechargeTxn.refundStatus === true) {
-      return { refunded: true }; // idempotent
-    }
-
     // 🔐 Fetch wallet
     const wallet = await Wallet.findOne({
       where: { userId: rechargeTxn.userId },
@@ -109,10 +126,13 @@ async function refundWallet({ rechargeTransactionId }) {
     const refundAmount = rechargeTxn.discountedAmount;
 
     const startingBalance = wallet.amount;
-    const endingBalance = startingBalance + refundAmount;
 
-    // 1️⃣ Credit wallet balance
-    await wallet.update({ amount: endingBalance }, { transaction: t });
+    await wallet.increment(
+      { amount: refundAmount },
+      { transaction: t }
+    );
+
+    const endingBalance = startingBalance + refundAmount;
 
     // 2️⃣ Create wallet transaction (REFUND)
     await WalletTransaction.create(
@@ -130,8 +150,7 @@ async function refundWallet({ rechargeTransactionId }) {
       { transaction: t }
     );
 
-    // 3️⃣ Mark recharge refunded
-    await rechargeTxn.update({ refundStatus: true }, { transaction: t });
+
 
     return {
       refunded: true,
