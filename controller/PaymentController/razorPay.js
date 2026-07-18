@@ -53,8 +53,13 @@ exports.payRequest = async (req, res) => {
             subCategoryId,
             rechargeType,
             discountedAmount,
-            purpose
+            purpose,
+            planCode
         } = req.body;
+
+        console.log("plan code is ----------------------------------",planCode)
+        console.log("req.body from pay request is ----------------------------------",req.body)
+
 
         const user = req.user;
         const userId = user.id;
