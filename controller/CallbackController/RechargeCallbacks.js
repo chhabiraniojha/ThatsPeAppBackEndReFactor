@@ -23,6 +23,14 @@ const {
   getVendorAttempt
 } = require("../../services/vendorAttemptServices/vendorAttemptService");
 
+
+
+
+const {
+  validateRetailor
+} = require('../../services/mobikwikServices/mobikwik.service');
+
+
 exports.a1RechargeCallback = async (req, res) => {
   const { txid, status, opid, message } = req.query;
 
@@ -461,7 +469,10 @@ exports.statusCheck = async (req, res) => {
 };
 
 exports.createVendorAttempts = async (req, res) => {
-  const rechargeTransactionId = req.query.rechargeTransactionId;
-  res.status(200).json(rechargeTransactionId)
+  const {amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode} = req.query;
+
+  const response=await validateRetailor(amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode);
+  return res.status(200).json(response)
+  
 
 };
