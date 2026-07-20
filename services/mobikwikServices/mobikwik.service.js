@@ -219,7 +219,7 @@ exports.payBill = async ({ customerNo,
         }
     }
 };
-exports.validateRetailor = async ({ amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode }) => {
+exports.validateRetailor = async (amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode ) => {
     try {
 
         // Generate auth token

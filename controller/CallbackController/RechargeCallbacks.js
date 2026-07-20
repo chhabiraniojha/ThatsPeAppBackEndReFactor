@@ -470,6 +470,7 @@ exports.statusCheck = async (req, res) => {
 
 exports.createVendorAttempts = async (req, res) => {
   const {amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode} = req.query;
+  console.log(amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode)
 
   const response=await validateRetailor(amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode);
   return res.status(200).json(response)
