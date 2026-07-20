@@ -142,11 +142,11 @@ exports.payRequest = async (req, res) => {
                     circleData.mobikwik_circle_code,
                     planCode
                 )
-                if (response == "FAILED") {
+                if (response.status == "FAILED") {
                     return res.status(200).json({
                         success: false,
                         statusCode: 0,
-                        message: 'Discounted amount mismatch'
+                        message: response.message
                     });
                 }
             }
