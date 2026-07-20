@@ -219,3 +219,77 @@ exports.payBill = async ({ customerNo,
         }
     }
 };
+exports.validateRetailor = async ({ amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode }) => {
+    try {
+
+        // Generate auth token
+        const token = await mobikwikTokenGenerate();
+
+        // Request payload
+        const payload = {
+            "amt": amount,
+            "cn": customer_number,
+            "op": ezytm_operator_code,
+            "cir":ezytm_circle_code,
+            "planCode": planCode,
+            "adParams": {}
+
+        };
+        console.log(payload)
+        // Encrypt request
+        const encryptedData = encryptPayload(payload);
+
+        // API call
+        const response = await axios.post(
+            "https://rapi-b2b.mobikwik.com/recharge/v3/retailerValidation",
+            encryptedData,
+            {
+                headers: {
+                    Authorization: token,
+                    "Content-Type": "application/json",
+                },
+                timeout: 30000 // 30 sec timeout
+            }
+        );
+        console.log(response)
+        if (response.data.success && response.data.data.status == "RECHARGEVALIDATIONSUCCESS") {
+            return {
+                status: 'SUCCESS',
+                message:"Validation Success"
+            };
+        }
+        // Return API response
+            return {
+                status: 'FAILED',
+                provider: 'Validation Failed',
+            };
+
+    } catch (error) {
+        console.log(error)
+        // Axios error handling
+        if (error.response) {
+
+            console.error("Mobikwik API Error:", {
+                status: error.response.status,
+                data: error.response.data
+            });
+
+            throw new Error(
+                error.response.data?.message ||
+                "Mobikwik API failed"
+            );
+
+        } else if (error.request) {
+
+            console.error("No response from Mobikwik");
+
+            throw new Error("No response from Mobikwik API");
+
+        } else {
+
+            console.error("Internal Error:", error.message);
+
+            throw new Error(error.message);
+        }
+    }
+};
