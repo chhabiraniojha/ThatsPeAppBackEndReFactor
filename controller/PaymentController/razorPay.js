@@ -6,6 +6,7 @@ const Payment = require('../../models/PaymentModel/payment');
 const requestIp = require('request-ip');
 const UIDGenerator = require('../../util/uidGenerator');
 const operatorModel = require('../../models/OperatorDataModel/operatorData');
+const circleModel = require("../../models/CircleDataModel/circleData")
 const walletOrderModel = require('../../models/OrderModel/walletOrder');
 const walletModel = require('../../models/WalletModels/WalletSchema/wallet');
 const PaymentGatewayModel = require('../../models/PayentGatway/paymentGatway')
@@ -15,6 +16,7 @@ const failureHTML = require('../../templates/paymentFailed');
 const pendingHTML = require('../../templates/paymentPending');
 const razorpay = require("../../util/razorpay")
 const { validatePaymentVerification, validateWebhookSignature } = require('razorpay/dist/utils/razorpay-utils');
+const { validateRetailor } = require('../../services/mobikwikServices/mobikwik.service');
 
 // exports.generateSignature = async (req, res) => {
 //   try {
@@ -57,8 +59,6 @@ exports.payRequest = async (req, res) => {
             planCode
         } = req.body;
 
-        console.log("plan code is ----------------------------------",planCode)
-        console.log("req.body from pay request is ----------------------------------",req.body)
 
 
         const user = req.user;
@@ -123,7 +123,33 @@ exports.payRequest = async (req, res) => {
                     message: 'Operator not found'
                 });
             }
+            if (subCategoryId == "JxQmQdtoe3BVwAwDXbiGCR") {
+                const operatorData = await operatorModel.findOne({
+                    where: {
+                        ezytm_operator_code
+                    }
+                });
+                const circleData = await circleModel.findOne({
+                    where: {
+                        ezytm_circle_code
+                    }
+                });
 
+                const response = await validateRetailor(
+                    amount,
+                    customer_number,
+                    operatorData.mobi_operator_code,
+                    circleData.mobikwik_circle_code,
+                    planCode
+                )
+                if (response == "FAILED") {
+                    return res.status(200).json({
+                        success: false,
+                        statusCode: 0,
+                        message: 'Discounted amount mismatch'
+                    });
+                }
+            }
             const discountAmount = operatorData.discount;
             const discountType = operatorData.discount_type;
 
@@ -622,7 +648,7 @@ exports.webhook = async (req, res) => {
                     try {
                         rechargeResponse = await axios.post(`${process.env.SERVER_BASEUSRL}/user/recharge-and-billpayments-upi`, apiDataForRecharge);
                         // console.log(rechargeResponse)
-                     
+
                     } catch (apiErr) {
                         // console.error('Recharge API error:', finalOrderId, apiErr);
                         return; // keep PROCESSING → retry later
@@ -767,17 +793,17 @@ exports.razorPayKey = async (req, res) => {
 
     try {
 
-       const razorPayGatewayData=await PaymentGatewayModel.findOne(
-        {
-            where:{
-                name:"razorpay"
+        const razorPayGatewayData = await PaymentGatewayModel.findOne(
+            {
+                where: {
+                    name: "razorpay"
+                }
             }
-        }
-       ) 
-       return res.status(200).json({
-        success:true,
-        razorpay_key:razorPayGatewayData.dataValues.key
-       })
+        )
+        return res.status(200).json({
+            success: true,
+            razorpay_key: razorPayGatewayData.dataValues.key
+        })
 
     } catch (error) {
 

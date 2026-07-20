@@ -219,7 +219,7 @@ exports.payBill = async ({ customerNo,
         }
     }
 };
-exports.validateRetailor = async (amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode) => {
+exports.validateRetailor = async (amt, cn,op, cir, planCode) => {
     try {
 
         // Generate auth token
@@ -227,10 +227,10 @@ exports.validateRetailor = async (amount, customer_number, ezytm_operator_code, 
 
         // Request payload
         const payload = {
-            "amt": amount,
-            "cn": customer_number,
-            "op": ezytm_operator_code,
-            "cir": ezytm_circle_code,
+            "amt": amt,
+            "cn": cn,
+            "op": op,
+            "cir": cir,
             "planCode": planCode,
             "adParams": {}
 
