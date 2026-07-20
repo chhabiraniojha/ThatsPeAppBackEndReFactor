@@ -219,7 +219,7 @@ exports.payBill = async ({ customerNo,
         }
     }
 };
-exports.validateRetailor = async (amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode ) => {
+exports.validateRetailor = async (amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode) => {
     try {
 
         // Generate auth token
@@ -230,12 +230,11 @@ exports.validateRetailor = async (amount, customer_number, ezytm_operator_code, 
             "amt": amount,
             "cn": customer_number,
             "op": ezytm_operator_code,
-            "cir":ezytm_circle_code,
+            "cir": ezytm_circle_code,
             "planCode": planCode,
             "adParams": {}
 
         };
-        console.log(payload)
         // Encrypt request
         const encryptedData = encryptPayload(payload);
 
@@ -251,18 +250,22 @@ exports.validateRetailor = async (amount, customer_number, ezytm_operator_code, 
                 timeout: 30000 // 30 sec timeout
             }
         );
-        console.log(response)
         if (response.data.success && response.data.data.status == "RECHARGEVALIDATIONSUCCESS") {
             return {
                 status: 'SUCCESS',
-                message:"Validation Success"
+                message: "Validation Success"
+            };
+        } else if (response.data.success == false && response.data.data.status == "RECHARGEVALIDATIONFAILURE") {
+            return {
+                status: 'FAILED',
+                message: response.data.message.text
             };
         }
         // Return API response
-            return {
-                status: 'FAILED',
-                provider: 'Validation Failed',
-            };
+        return {
+            status: 'FAILED',
+            message: 'Validation Failed',
+        };
 
     } catch (error) {
         console.log(error)
