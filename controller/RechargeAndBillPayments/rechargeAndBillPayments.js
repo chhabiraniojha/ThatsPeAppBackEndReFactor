@@ -5,6 +5,8 @@ const circleModel = require('../../models/CircleDataModel/circleData')
 // const paymentTransactionModel = require('../../models/PaymentTransactionModel/paymentTransaction')
 // const walletTransactionModel = require('../../models/WalletModels/Wallet Transaction/walletTransaction')
 const paymentModel = require('../../models/PaymentModel/payment');
+const { validateRetailor } = require('../../services/mobikwikServices/mobikwik.service');
+
 // const walletController = require('../../controller/WalletController/wallet')
 // const  a1RechargeService  = require('../../services/recharge/a1Recharge')
 // const rechargeExchangeService = require('../../services/recharge/rechargeExchangeRecharge')
@@ -610,7 +612,34 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
 
       console.log("circleData", circleData);
     }
+    
+    if (subCategoryId == "JxQmQdtoe3BVwAwDXbiGCR") {
+                const operatorData = await operatorModel.findOne({
+                    where: {
+                        ezytm_operator_code
+                    }
+                });
+                const circleData = await circleModel.findOne({
+                    where: {
+                        ezytm_circle_code
+                    }
+                });
 
+                const response = await validateRetailor(
+                    amount,
+                    customer_number,
+                    operatorData.mobi_operator_code,
+                    circleData.mobikwik_circle_code,
+                    planCode
+                )
+                if (response.status == "FAILED") {
+                    return res.status(200).json({
+                        success: false,
+                        statusCode: 0,
+                        message: response.message
+                    });
+                }
+            }
     /* --------------------------------------------------
        3. BACKEND DISCOUNT RECOMPUTE (SECURITY)
     -------------------------------------------------- */
