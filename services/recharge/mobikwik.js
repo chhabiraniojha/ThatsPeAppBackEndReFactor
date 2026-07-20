@@ -14,10 +14,10 @@ exports.mobikwik = async (data) => {
 
         api = await getApiByName("Mobikwik");
 
-        await createVendorAttempt({
-            rechargeTransactionId: data.rechargeTransactionId,
-            apiId: api.id,
-        });
+        // await createVendorAttempt({
+        //     rechargeTransactionId: data.rechargeTransactionId,
+        //     apiId: api.id,
+        // });
 
         const token = await mobikwikTokenGenerate();
 
@@ -51,14 +51,14 @@ exports.mobikwik = async (data) => {
         );
         console.log(response)
         if (response.data.success && response.data.data.status == "SUCCESS") {
-            await updateVendorAttempt({
-                rechargeTransactionId: data.rechargeTransactionId,
-                apiId: api.id,
-                status: "SUCCESS",
-                vendorTransactionId: response.data.opid || null,
-                rawResponse: response.data,
-                message: response.data.Message || null,
-            });
+            // await updateVendorAttempt({
+            //     rechargeTransactionId: data.rechargeTransactionId,
+            //     apiId: api.id,
+            //     status: "SUCCESS",
+            //     vendorTransactionId: response.data.opid || null,
+            //     rawResponse: response.data,
+            //     message: response.data.Message || null,
+            // });
 
             return {
                 status: "SUCCESS",
@@ -66,14 +66,14 @@ exports.mobikwik = async (data) => {
                 raw: response.data,
             };
         } else if (response.data.success && response.data.data.status == "SUCCESSPENDING") {
-            await updateVendorAttempt({
-                rechargeTransactionId: data.rechargeTransactionId,
-                apiId: api.id,
-                status: "PENDING",
-                vendorTransactionId: response.data.opid || null,
-                rawResponse: response.data,
-                message: response.data.Message || null,
-            });
+            // await updateVendorAttempt({
+            //     rechargeTransactionId: data.rechargeTransactionId,
+            //     apiId: api.id,
+            //     status: "PENDING",
+            //     vendorTransactionId: response.data.opid || null,
+            //     rawResponse: response.data,
+            //     message: response.data.Message || null,
+            // });
             return {
                 status: 'PENDING',
                 provider: 'Mobikwik',
@@ -81,14 +81,14 @@ exports.mobikwik = async (data) => {
             };
         }
         // Return API response
-        await updateVendorAttempt({
-            rechargeTransactionId: data.rechargeTransactionId,
-            apiId: api.id,
-            status: "FAILED",
-            vendorTransactionId: statusResponse.data.opid || null,
-            rawResponse: statusResponse.data,
-            message: statusResponse.data.Message || null,
-        });
+        // await updateVendorAttempt({
+        //     rechargeTransactionId: data.rechargeTransactionId,
+        //     apiId: api.id,
+        //     status: "FAILED",
+        //     vendorTransactionId: statusResponse.data.opid || null,
+        //     rawResponse: statusResponse.data,
+        //     message: statusResponse.data.Message || null,
+        // });
         return {
             status: 'FAILED',
             provider: 'mobikwik',
@@ -99,13 +99,13 @@ exports.mobikwik = async (data) => {
 
     } catch (error) {
         if (api) {
-            await updateVendorAttempt({
-                rechargeTransactionId: data.rechargeTransactionId,
-                apiId: api.id,
-                status: "PENDING",
-                rawResponse: error.response?.data || null,
-                message: error.message,
-            });
+            // await updateVendorAttempt({
+            //     rechargeTransactionId: data.rechargeTransactionId,
+            //     apiId: api.id,
+            //     status: "PENDING",
+            //     rawResponse: error.response?.data || null,
+            //     message: error.message,
+            // });
         }
 
 
