@@ -713,7 +713,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
       rechargeTransactionId: orchestrationResult.rechargeTransactionId
     });
   } catch (error) {
-    // console.error('STEP-4 ERROR:', error);
+    console.error('STEP-4 ERROR:', error);
     return res.status(500).json({
       success: false,
       statuscode: 0,
