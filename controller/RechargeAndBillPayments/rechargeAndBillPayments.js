@@ -632,6 +632,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
                     circleData.mobikwik_circle_code,
                     planCode
                 )
+                console.log("validation failed---------------------",response)
                 if (response.status == "FAILED") {
                     return res.status(200).json({
                         success: false,
