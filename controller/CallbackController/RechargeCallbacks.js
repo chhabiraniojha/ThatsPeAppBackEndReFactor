@@ -9,6 +9,7 @@ const Wallet = require('../../models/WalletModels/WalletSchema/wallet');
 const WalletTransaction = require('../../models/WalletModels/Wallet Transaction/walletTransaction');
 const SubCategory = require('../../models/SubCategoryModel/subCategory');
 const uid = require('../../util/uidGenerator');
+const mobikwikRechargeService=require("../../services/recharge/mobikwik")
 
 
 
@@ -469,11 +470,19 @@ exports.statusCheck = async (req, res) => {
 };
 
 exports.createVendorAttempts = async (req, res) => {
-  const {amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode} = req.query;
-  console.log(amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode)
+  const {amount,rechargeTransactionId, customer_number, operatorCode, circleCode} = req.query;
 
-  const response=await validateRetailor(amount, customer_number, ezytm_operator_code, ezytm_circle_code, planCode);
-  return res.status(200).json(response)
+  const data={
+    customer_number,
+    operatorCode,
+    circleCode,
+    amount,
+    rechargeTransactionId
+  }
+
+  const response=await mobikwikRechargeService.mobikwik(data);
+  return res.status(200).json(response);
+
   
 
 };

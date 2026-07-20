@@ -36,7 +36,7 @@ const WalletTransaction = sequelize.define('WalletTransaction', {
     defaultValue: null
   },
   transactionType: {
-    type: DataTypes.ENUM('Add Funds', 'Recharge', 'Refund'),
+    type: DataTypes.ENUM('Add Funds', 'Recharge', 'Refund','Redeem'),
     allowNull: false
   },
   balanceType: {

@@ -15,6 +15,7 @@ const roboticsRechargeService = require('./recharge/roboticRecharge');
 const rechargeExchangeService = require('./recharge/rechargeExchangeRecharge');
 const a1RechargeService = require('./recharge/a1Recharge');
 const mobikwikService = require("./mobikwikServices/mobikwik.service")
+const mobikwikRechargeService = require("./recharge/mobikwik")
 
 async function processRecharge({
   userId,
@@ -108,12 +109,12 @@ async function processRecharge({
       await updateRechargeTransactionStatus({
         rechargeTransactionId: rechargeTransaction.id,
         status: "SUCCESS",
-        apiName: "mobikwik"
+        apiName: "Mobikwik"
       });
 
       return {
         status: "SUCCESS",
-        provider: "mobikwik",
+        provider: "Mobikwik",
         rechargeTransactionId: rechargeTransaction.id
       };
     }
@@ -122,12 +123,12 @@ async function processRecharge({
       await updateRechargeTransactionStatus({
         rechargeTransactionId: rechargeTransaction.id,
         status: "PENDING",
-        apiName: "mobikwik"
+        apiName: "Mobikwik"
       });
 
       return {
         status: "PENDING",
-        provider: "mobikwik",
+        provider: "Mobikwik",
         rechargeTransactionId: rechargeTransaction.id
       };
     }
@@ -136,7 +137,7 @@ async function processRecharge({
     await updateRechargeTransactionStatus({
       rechargeTransactionId: rechargeTransaction.id,
       status: "FAILED",
-      apiName: "mobikwik"
+      apiName: "Mobikwik"
     });
 
     await refundWallet({
@@ -169,6 +170,12 @@ async function processRecharge({
       call: a1RechargeService.a1Recharge,
       operatorCode: operatorData.a1_operator_code,
       circleCode: circleData?.a1_circle_code ?? ""
+    },
+    {
+      name: 'Mobikwik',
+      call: mobikwikRechargeService.mobikwik,
+      operatorCode: operatorData.mobi_operator_code,
+      circleCode: circleData?.mobikwik_circle_code ?? ""
     }
   ];
 
@@ -328,9 +335,9 @@ async function processRechargeForWallet({
     rechargeTransactionId: rechargeTransaction.id,
     status: 'PROCESSING'
   });
-/* --------------------------------------------------
-    STEP 3: MOBIKWIK BBPS SUBCATEGORY
-  -------------------------------------------------- */
+  /* --------------------------------------------------
+      STEP 3: MOBIKWIK BBPS SUBCATEGORY
+    -------------------------------------------------- */
 
   if (subCategoryId === "SAXYftzsGoaXY1iJ2Qq4VB") {
 
@@ -346,12 +353,12 @@ async function processRechargeForWallet({
       await updateRechargeTransactionStatus({
         rechargeTransactionId: rechargeTransaction.id,
         status: "SUCCESS",
-        apiName: "mobikwik"
+        apiName: "Mobikwik"
       });
 
       return {
         status: "SUCCESS",
-        provider: "mobikwik",
+        provider: "Mobikwik",
         rechargeTransactionId: rechargeTransaction.id
       };
     }
@@ -360,12 +367,12 @@ async function processRechargeForWallet({
       await updateRechargeTransactionStatus({
         rechargeTransactionId: rechargeTransaction.id,
         status: "PENDING",
-        apiName: "mobikwik"
+        apiName: "Mobikwik"
       });
 
       return {
         status: "PENDING",
-        provider: "mobikwik",
+        provider: "Mobikwik",
         rechargeTransactionId: rechargeTransaction.id
       };
     }
@@ -374,7 +381,7 @@ async function processRechargeForWallet({
     await updateRechargeTransactionStatus({
       rechargeTransactionId: rechargeTransaction.id,
       status: "FAILED",
-      apiName: "mobikwik"
+      apiName: "Mobikwik"
     });
 
     await refundWallet({
@@ -408,6 +415,12 @@ async function processRechargeForWallet({
       call: a1RechargeService.a1Recharge,
       operatorCode: operatorData.a1_operator_code,
       circleCode: circleData?.a1_circle_code ?? ""
+    },
+    {
+      name: 'Mobikwik',
+      call: mobikwikRechargeService.mobikwik,
+      operatorCode: operatorData.mobi_operator_code,
+      circleCode: circleData?.mobikwik_circle_code ?? ""
     }
   ];
 

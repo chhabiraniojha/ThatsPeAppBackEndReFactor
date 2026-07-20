@@ -173,20 +173,20 @@ exports.payBill = async ({ customerNo,
         if (response.data.success && response.data.data.status == "SUCCESS") {
             return {
                 status: 'SUCCESS',
-                provider: 'mobikwik',
+                provider: 'Mobikwik',
                 raw: response.data
             };
         } else if (response.data.success && response.data.data.status == "SUCCESSPENDING") {
             return {
                 status: 'PENDING',
-                provider: 'mobikwik',
+                provider: 'Mobikwik',
                 raw: response.data
             };
         }
         // Return API response
         return {
             status: 'FAILED',
-            provider: 'mobikwik',
+            provider: 'Mobikwik',
             raw: response.data
         };
 
