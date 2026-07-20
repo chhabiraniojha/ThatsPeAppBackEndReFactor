@@ -550,6 +550,7 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
       subCategoryId,
       transactionType, // 'cash' | 'wallet'
       rechargeType, // PREPAID | POSTPAID | DTH
+      planCode
     } = req.body;
     const user = req.user;
     const userId = user.id;
@@ -559,21 +560,18 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
     if (!ezytm_operator_code || !customer_number || !amount || !subCategoryId || !transactionType || !rechargeType || !discountedAmount) {
       return res.status(200).json({
         success: false,
-        statuscode: 0,
         message: 'Invalid request parameters'
       });
     }
     if (transactionType !== 'wallet') {
       return res.status(200).json({
         success: false,
-        statuscode: 0,
         message: 'transaction type is invalid'
       });
     }
     if (Number(amount) <= 0) {
       return res.status(200).json({
         success: false,
-        statuscode: 0,
         message: 'Invalid recharge amount'
       });
     }
@@ -588,7 +586,6 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
     if (!operatorData) {
       return res.status(200).json({
         success: false,
-        statuscode: 0,
         message: 'Invalid operator'
       });
     }
@@ -605,7 +602,6 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
       if (!circleData) {
         return res.status(200).json({
           success: false,
-          statuscode: 0,
           message: 'Invalid circle'
         });
       }
@@ -636,7 +632,6 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
                 if (response.status == "FAILED") {
                     return res.status(200).json({
                         success: false,
-                        statusCode: 0,
                         message: response.message
                     });
                 }
@@ -660,7 +655,6 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
     if (Number(beDiscountedAmount) !== Number(discountedAmount)) {
       return res.status(200).json({
         success: false,
-        statuscode: 0,
         message: 'Discounted amount mismatch'
       });
     }
@@ -716,7 +710,6 @@ exports.rechargeAndBillPaymentsViaWallet = async (req, res) => {
     console.error('STEP-4 ERROR:', error);
     return res.status(500).json({
       success: false,
-      statuscode: 0,
       message: 'Internal server error'
     });
   }
