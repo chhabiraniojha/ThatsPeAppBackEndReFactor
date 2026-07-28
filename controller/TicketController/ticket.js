@@ -49,7 +49,7 @@ exports.createTicket = async (req, res) => {
     //     transaction: t
     // });
 
-    const executive = await axios.get(`${process.env.MYPAY_ADMIN_BACKEND_URL}admin/executive`);
+    const executive = await axios.get(`${process.env.MYPAY_ADMIN_BACKEND_URL}/admin/executive`);
 
     if (!executive.data.success) {
       return res.status(200).json({ message: 'No executives available at this time tray after some time', success: false, statuscode: 0 });
