@@ -68,8 +68,8 @@ const { initializeSocket } = require('./util/socket');
 
 
 // relationship between user and rechargAndBillPaymentTransactions table
-// User.hasMany(rechargAndBillPaymentTransactions)
-// rechargAndBillPaymentTransactions.belongsTo(User)
+User.hasMany(rechargAndBillPaymentTransactions)
+rechargAndBillPaymentTransactions.belongsTo(User)
 
 
 // relationship between Api table and rechargAndBillPaymentTransactions table

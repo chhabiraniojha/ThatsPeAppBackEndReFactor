@@ -12,7 +12,7 @@ const RechargeAndBillPayTransaction = sequelize.define("AllTransactions", {
     type: DataTypes.STRING,
     allowNull: true,
     references: {
-      model: AvailableAPIs,  
+      model: AvailableAPIs,
       key: "id",
     },
     onDelete: "SET NULL",
@@ -71,28 +71,39 @@ const RechargeAndBillPayTransaction = sequelize.define("AllTransactions", {
     defaultValue: false,
   },
   userId: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      references: {
-          model: User,
-          key: 'id' 
-      },
-      onDelete: 'CASCADE',
-      onUpdate: 'CASCADE'
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: User,
+      key: 'id'
+    },
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
 
   },
- 
-  subCategoryId: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      references: { 
-          model: 'SubCategories',
-          key: 'id' 
-      },
-      onDelete: 'SET NULL',
-      onUpdate: 'CASCADE'
 
-  }
+  subCategoryId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    references: {
+      model: 'SubCategories',
+      key: 'id'
+    },
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
+
+  },
+  commission: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0.00
+  },
+
+  distributedCommission: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0.00
+  },
 });
 
 module.exports = RechargeAndBillPayTransaction;
