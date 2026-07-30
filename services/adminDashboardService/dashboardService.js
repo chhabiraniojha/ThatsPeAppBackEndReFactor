@@ -5,7 +5,8 @@ const {
     getPaymentModeSummary,
     getDailyRevenueChart,
     getDailyTransactionChart,
-    getTopUsers
+    getTopUsers,
+    getRecentTransactions
 } = require("../adminHelpers/dashboardHelper");
 
 const {
@@ -90,6 +91,7 @@ async function getDashboard(period, from = null, to = null) {
         currentEnd
 
     );
+    const recentTransactions = await getRecentTransactions(10);
     return {
 
         financialOverview: {
@@ -141,7 +143,8 @@ async function getDashboard(period, from = null, to = null) {
         paymentModeSummary,
         dailyRevenueChart,
         dailyTransactionChart,
-        topUsers
+        topUsers,
+        recentTransactions
 
     };
 

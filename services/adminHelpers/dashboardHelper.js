@@ -747,6 +747,49 @@ async function getTopUsers(startDate, endDate) {
         totalCommission: Number(item.totalCommission)
     }));
 }
+async function getRecentTransactions(limit = 10) {
+
+    const query = `
+        SELECT
+            t.id AS transactionId,
+            t.customerNo,
+            t.userId,
+            u.name AS userName,
+            u.mobileNo,
+            t.operator,
+            t.amount,
+            t.commission,
+            t.paymentTransactionType AS paymentMode,
+            t.status,
+            t.createdAt
+        FROM AllTransactions t
+        INNER JOIN Users u
+            ON u.id = t.userId
+        ORDER BY t.createdAt DESC
+        LIMIT :limit;
+    `;
+
+    const result = await sequelize.query(query, {
+        replacements: {
+            limit
+        },
+        type: QueryTypes.SELECT
+    });
+
+    return result.map(item => ({
+        transactionId: item.transactionId,
+        customerNo: item.customerNo,
+        userId: item.userId,
+        userName: item.userName,
+        mobileNo: item.mobileNo,
+        operator: item.operator,
+        amount: Number(item.amount),
+        commission: Number(item.commission),
+        paymentMode: item.paymentMode,
+        status: item.status,
+        createdAt: item.createdAt
+    }));
+}
 module.exports = {
 
     getFinancialOverview,
@@ -761,6 +804,8 @@ module.exports = {
 
     getDailyTransactionChart,
 
-    getTopUsers
+    getTopUsers,
+
+    getRecentTransactions
 
 };
