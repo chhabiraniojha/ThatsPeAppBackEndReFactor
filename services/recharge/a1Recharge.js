@@ -65,6 +65,102 @@ exports.a1Recharge = async (data) => {
     // PENDING
 
 
+    // if (vendorStatus === "PENDING") {
+
+    //   await updateVendorAttempt({
+    //     rechargeTransactionId: data.rechargeTransactionId,
+    //     apiId: api.id,
+    //     status: "PENDING",
+    //     vendorTransactionId: response.data.opid || null,
+    //     rawResponse: response.data,
+    //     message: response.data.Message || null,
+    //   });
+
+    //   const sleep = (ms) =>
+    //     new Promise((resolve) => setTimeout(resolve, ms));
+
+    //   const maxDuration = 20000;
+    //   const interval = 5000;
+
+    //   const startTime = Date.now();
+
+    //   while (Date.now() - startTime < maxDuration) {
+
+    //     try {
+
+    //       const statusResponse = await axios.get(
+    //         "https://business.a1topup.com/recharge/status",
+    //         {
+    //           params: {
+    //             username: process.env.A1_USERNAME,
+    //             pwd: process.env.A1_PASSWORD,
+    //             orderid: data.rechargeTransactionId,
+    //             format: "json",
+    //           },
+    //           timeout: 20000,
+    //         }
+    //       );
+    //       console.log('A1 status response is ---------------------------',statusResponse.data)
+    //       const status = String(
+    //         statusResponse?.data?.Status ||
+    //         statusResponse?.data?.status ||
+    //         ""
+    //       ).toUpperCase();
+
+    //       if (status === "SUCCESS") {
+
+    //         await updateVendorAttempt({
+    //           rechargeTransactionId: data.rechargeTransactionId,
+    //           apiId: api.id,
+    //           status: "SUCCESS",
+    //           vendorTransactionId: statusResponse.data.opid || null,
+    //           rawResponse: statusResponse.data,
+    //           message: statusResponse.data.Message || null,
+    //         });
+
+    //         return {
+    //           status: "SUCCESS",
+    //           provider: "A1",
+    //           raw: statusResponse.data,
+    //         };
+    //       }
+
+    //       if (status === "FAILURE") {
+
+    //         await updateVendorAttempt({
+    //           rechargeTransactionId: data.rechargeTransactionId,
+    //           apiId: api.id,
+    //           status: "FAILED",
+    //           vendorTransactionId: statusResponse.data.opid || null,
+    //           rawResponse: statusResponse.data,
+    //           message: statusResponse.data.Message || null,
+    //         });
+
+    //         return {
+    //           status: "FAILED",
+    //           provider: "A1",
+    //           raw: statusResponse.data,
+    //         };
+    //       }
+
+    //     } catch (err) {
+    //       console.error(
+    //         `A1 Status Check Error (${data.rechargeTransactionId}):`,
+    //         err.message
+    //       );
+    //       // Ignore this error and continue polling
+    //     }
+
+    //     await sleep(interval);
+    //   }
+
+    //   // Still pending after 20 seconds
+    //   return {
+    //     status: "PENDING",
+    //     provider: "A1",
+    //     raw: response.data,
+    //   };
+    // }
     if (vendorStatus === "PENDING") {
 
       await updateVendorAttempt({
@@ -76,90 +172,7 @@ exports.a1Recharge = async (data) => {
         message: response.data.Message || null,
       });
 
-      const sleep = (ms) =>
-        new Promise((resolve) => setTimeout(resolve, ms));
-
-      const maxDuration = 20000;
-      const interval = 5000;
-
-      const startTime = Date.now();
-
-      while (Date.now() - startTime < maxDuration) {
-
-        try {
-
-          const statusResponse = await axios.get(
-            "https://business.a1topup.com/recharge/status",
-            {
-              params: {
-                username: process.env.A1_USERNAME,
-                pwd: process.env.A1_PASSWORD,
-                orderid: data.rechargeTransactionId,
-                format: "json",
-              },
-              timeout: 20000,
-            }
-          );
-          console.log('A1 status response is ---------------------------',statusResponse.data)
-          const status = String(
-            statusResponse?.data?.Status ||
-            statusResponse?.data?.status ||
-            ""
-          ).toUpperCase();
-
-          if (status === "SUCCESS") {
-
-            await updateVendorAttempt({
-              rechargeTransactionId: data.rechargeTransactionId,
-              apiId: api.id,
-              status: "SUCCESS",
-              vendorTransactionId: statusResponse.data.opid || null,
-              rawResponse: statusResponse.data,
-              message: statusResponse.data.Message || null,
-            });
-
-            return {
-              status: "SUCCESS",
-              provider: "A1",
-              raw: statusResponse.data,
-            };
-          }
-
-          if (status === "FAILURE") {
-
-            await updateVendorAttempt({
-              rechargeTransactionId: data.rechargeTransactionId,
-              apiId: api.id,
-              status: "FAILED",
-              vendorTransactionId: statusResponse.data.opid || null,
-              rawResponse: statusResponse.data,
-              message: statusResponse.data.Message || null,
-            });
-
-            return {
-              status: "FAILED",
-              provider: "A1",
-              raw: statusResponse.data,
-            };
-          }
-
-        } catch (err) {
-          console.error(
-            `A1 Status Check Error (${data.rechargeTransactionId}):`,
-            err.message
-          );
-          // Ignore this error and continue polling
-        }
-
-        await sleep(interval);
-      }
-
-      // Still pending after 20 seconds
-      return {
-        status: "PENDING",
-        provider: "A1",
-        raw: response.data,
-      };
+      return await pollA1Status(data, api);
     }
 
     // Immediate FAILURE
@@ -180,14 +193,24 @@ exports.a1Recharge = async (data) => {
     };
 
   } catch (error) {
-    if(api){
-    await updateVendorAttempt({
-      rechargeTransactionId: data.rechargeTransactionId,
-      apiId: api.id,
-      status: "PENDING",
-      rawResponse: error.response?.data || null,
-      message: error.message,
-    });
+    if (error.code === "ECONNABORTED") {
+
+      console.log("Recharge API timed out. Checking status...");
+
+      const result = await pollA1Status(data, api);
+
+      if (result.status !== "PENDING") {
+        return result;
+      }
+    }
+    if (api) {
+      await updateVendorAttempt({
+        rechargeTransactionId: data.rechargeTransactionId,
+        apiId: api.id,
+        status: "PENDING",    
+        rawResponse: error.response?.data || null,
+        message: error.message,
+      });
     }
 
 
