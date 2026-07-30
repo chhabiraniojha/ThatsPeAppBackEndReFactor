@@ -1,3 +1,10 @@
+const axios=require("axios");
+const {
+  getApiByName,
+  createVendorAttempt,
+  updateVendorAttempt,
+} = require("../../services/vendorAttemptServices/vendorAttemptService");
+
 async function pollA1Status(data, api) {
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -70,3 +77,8 @@ async function pollA1Status(data, api) {
     provider: "A1",
   };
 }
+
+
+module.exports = {
+    pollA1Status,
+};
