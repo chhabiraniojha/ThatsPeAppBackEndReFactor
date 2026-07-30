@@ -32,7 +32,7 @@ exports.a1Recharge = async (data) => {
       "https://business.a1topup.com/recharge/api",
       {
         params: a1Params,
-        timeout: 30000,
+        timeout: 50000,
       }
     );
 
