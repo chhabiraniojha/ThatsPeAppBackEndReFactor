@@ -313,7 +313,7 @@ exports.payRequest = async (req, res) => {
                     : "Wallet Add Fund",
 
             txnType:
-                "14",
+                "1",
 
             mode:
                 "0",
@@ -451,7 +451,7 @@ exports.payRequest = async (req, res) => {
 
         const zaakPayResponse =
             await axios.post(
-                "https://api.zaakpay.com/api/paymentTransact/V13",
+                "https://zaakstaging.zaakpay.com/api/paymentTransact/V13",
 
                 requestBody,
 
