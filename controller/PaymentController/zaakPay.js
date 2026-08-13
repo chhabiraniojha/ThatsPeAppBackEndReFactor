@@ -451,7 +451,7 @@ exports.payRequest = async (req, res) => {
 
         const zaakPayResponse =
             await axios.post(
-                "https://zaakstaging.zaakpay.com/api/paymentTransact/V13",
+                " https://api.zaakpay.com/api/paymentTransact/V13",
 
                 requestBody,
 
