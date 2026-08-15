@@ -325,12 +325,12 @@ exports.getDthBillInfo = async (req, res) => {
       );
 
       console.log("TataPlay Response:", dthBillDataForTataPlay.data);
-      if (dthBillDataForTataPlay.data.status == true && dthBillDataForTataPlay.data.msg == "Success") {
+      if (dthBillDataForTataPlay.data.status == "Success") {
         data = {
           "error": "0",
           "DATA": {
-            "VC": dthBillDataForTataPlay?.data?.result?.data?.dth_number || "",
-            "Name": dthBillDataForTataPlay?.data?.result?.data?.customername || "",
+            "VC": Accountno || "",
+            "Name": dthBillDataForTataPlay?.data?.name || "",
             "Rmn": "",
             "Balance": 0,
             "Monthly": "",
