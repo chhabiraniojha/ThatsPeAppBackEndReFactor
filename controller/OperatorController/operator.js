@@ -321,7 +321,7 @@ exports.getDthBillInfo = async (req, res) => {
 
     if (operatorCode == 28) {
       const dthBillDataForTataPlay = await axios.get(
-        `https://plancheckapi.in/Users/apis/index.php?api_key=1ce93f-d78352-94c756-a0d74a-050f78&type=Dth_Info&number=${Accountno}&operator=TP`
+        `https://www.planconnect.in/api/dthInfo?apiKey=dfdd1c42e91ec13a53edb16d068e87040452338ecd8a31ce&vcNo=${Accountno}&operatorCode=TATASKY`
       );
 
       console.log("TataPlay Response:", dthBillDataForTataPlay.data);
