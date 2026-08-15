@@ -330,7 +330,7 @@ exports.getDthBillInfo = async (req, res) => {
           "error": "0",
           "DATA": {
             "VC": Accountno || "",
-            "Name": dthBillDataForTataPlay?.data?.name || "",
+            "Name": dthBillDataForTataPlay.data?.data?.name || "",
             "Rmn": "",
             "Balance": 0,
             "Monthly": "",
