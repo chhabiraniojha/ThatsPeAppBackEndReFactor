@@ -13,6 +13,8 @@ exports.getChecksumString = function (data) {
         "buyerCity",
         "buyerCountry",
         "buyerEmail",
+        "couAiId",
+        "couRefId",
         "buyerFirstName",
         "buyerLastName",
         "buyerPhoneNumber",
