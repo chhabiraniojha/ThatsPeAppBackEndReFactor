@@ -568,7 +568,116 @@ exports.payRequest = async (req, res) => {
 exports.webhook = async (req, res) => {
     // return res.status(200).json("ok,successfull")
     console.log("webhook hitted")
-    console.log(req.body)
+
+    try {
+        const { txnData, checksum } = req.body;
+
+        if (!txnData || !checksum) {
+            console.error("Zaakpay webhook: txnData/checksum missing");
+
+            return res.status(400).send("Invalid webhook");
+        }
+
+        // --------------------------------------------------
+        // 1. Parse txnData
+        // --------------------------------------------------
+
+        let data;
+
+        try {
+            data = JSON.parse(txnData);
+        } catch (error) {
+            console.error("Invalid txnData JSON");
+
+            return res.status(400).send("Invalid txnData");
+        }
+        // --------------------------------------------------
+        // 2. Validate merchantIdentifier
+        // --------------------------------------------------
+
+        if (
+            data.merchantIdentifier !==
+            process.env.ZAAKPAY_MERCHANT_IDENTIFIER
+        ) {
+            console.error("Invalid merchantIdentifier");
+
+            return res.status(400).send("Invalid merchant");
+        }
+        // --------------------------------------------------
+        // 3. txns should exist
+        // --------------------------------------------------
+
+        if (
+            !Array.isArray(data.txns) ||
+            data.txns.length === 0
+        ) {
+            console.error("No transaction found in txnData");
+
+            return res.status(400).send("No transaction");
+        }
+
+        // For normal single-payment flow
+        const txn = data.txns[0];
+
+        console.log("Zaakpay Transaction:", txn);
+        // --------------------------------------------------
+        // 4. Extract transaction details
+        // --------------------------------------------------
+
+        const {
+            orderId,
+            amount,
+            responseCode,
+            responseDescription,
+            pgTransId,
+            pgTransTime,
+            paymentMode,
+            paymentMethod,
+            bank,
+            bankid,
+            cardId,
+            cardScheme,
+            cardToken,
+            cardhashid,
+            doRedirect,
+            productDescription,
+            product1Description,
+            product2Description,
+            product3Description,
+            product4Description,
+        } = txn;
+
+        if (!orderId) {
+            console.error("orderId missing");
+
+            return res.status(400).send("Order ID missing");
+        }
+        // --------------------------------------------------
+        // 5. Verify Zaakpay webhook checksum
+        // --------------------------------------------------
+
+        const isValidChecksum = verifyZaakpayWebhookChecksum(
+            txnData,
+            checksum
+        );
+
+        if (!isValidChecksum) {
+            console.error(
+                "INVALID ZAAKPAY WEBHOOK CHECKSUM",
+                orderId
+            );
+
+            return res.status(400).send("Invalid checksum");
+        }
+
+        console.log(
+            "Zaakpay checksum verified:",
+            orderId
+        );
+
+    } catch (error) {
+
+    }
     // try {
     //     // =====================================
     //     // VERIFY WEBHOOK SIGNATURE
