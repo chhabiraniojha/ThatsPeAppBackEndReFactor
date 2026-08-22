@@ -657,7 +657,7 @@ exports.webhook = async (req, res) => {
         // 5. Verify Zaakpay webhook checksum
         // --------------------------------------------------
 
-        const isValidChecksum = validateZaakpayWebhookChecksum(
+        const isValidChecksum = zaakpayChecksum.validateZaakpayWebhookChecksum(
             txnData,
             checksum
         );
