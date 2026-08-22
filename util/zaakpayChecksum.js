@@ -143,7 +143,7 @@ exports.calculateChecksum = function (checksumstring) {
 
     return hmac.digest("hex");
 };
-exports.verifyZaakpayWebhookChecksum = function (txnData,receivedChecksum) {
+exports.validateZaakpayWebhookChecksum = function (txnData,receivedChecksum) {
 
   const secretKey =
     process.env.ZAAKPAY_SECRET_KEY;
