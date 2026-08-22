@@ -597,7 +597,7 @@ exports.webhook = async (req, res) => {
 
         if (
             data.merchantIdentifier !==
-            process.env.ZAAKPAY_MERCHANT_IDENTIFIER
+            process.env.ZAAKPAY_MERCHANT_ID
         ) {
             console.error("Invalid merchantIdentifier");
 
