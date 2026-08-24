@@ -144,21 +144,21 @@ exports.payRequest = async (req, res) => {
                 }
 
                 
-                const response = await validateRetailor(
-                    amount,
-                    customer_number,
-                    operatorData.mobi_operator_code,
-                    circleData.mobikwik_circle_code,
-                    planCode
-                );
+                // const response = await validateRetailor(
+                //     amount,
+                //     customer_number,
+                //     operatorData.mobi_operator_code,
+                //     circleData.mobikwik_circle_code,
+                //     planCode
+                // );
 
-                if (response.status === "FAILED") {
-                    return res.status(200).json({
-                        success: false,
-                        statusCode: 0,
-                        message: response.message
-                    });
-                }
+                // if (response.status === "FAILED") {
+                //     return res.status(200).json({
+                //         success: false,
+                //         statusCode: 0,
+                //         message: response.message
+                //     });
+                // }
                 
             }
 
@@ -731,7 +731,7 @@ exports.webhook = async (req, res) => {
             orderId
         );
 
-        if (responseCode != 100 || "100") {
+        if (responseCode != "100") {
             return
         }
 
