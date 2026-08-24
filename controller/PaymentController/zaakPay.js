@@ -144,21 +144,21 @@ exports.payRequest = async (req, res) => {
                 }
 
                 
-                // const response = await validateRetailor(
-                //     amount,
-                //     customer_number,
-                //     operatorData.mobi_operator_code,
-                //     circleData.mobikwik_circle_code,
-                //     planCode
-                // );
+                const response = await validateRetailor(
+                    amount,
+                    customer_number,
+                    operatorData.mobi_operator_code,
+                    circleData.mobikwik_circle_code,
+                    planCode
+                );
 
-                // if (response.status === "FAILED") {
-                //     return res.status(200).json({
-                //         success: false,
-                //         statusCode: 0,
-                //         message: response.message
-                //     });
-                // }
+                if (response.status === "FAILED") {
+                    return res.status(200).json({
+                        success: false,
+                        statusCode: 0,
+                        message: response.message
+                    });
+                }
                 
             }
 
@@ -283,12 +283,11 @@ exports.payRequest = async (req, res) => {
         // ============================================================
 
         const orderDetails = {
-            // amount: String(
-            //     Math.round(
-            //         Number(payableAmount) * 100
-            //     )
-            // ),
-            amount:100,
+            amount: String(
+                Math.round(
+                    Number(payableAmount) * 100
+                )
+            ),
             buyerEmail:
                 user.email,
 
@@ -555,6 +554,7 @@ exports.payRequest = async (req, res) => {
                         purpose === 'recharge'
                             ? orderId
                             : walletOrderId,
+                    paymentId,        
                     zaakpayUrl: "https://api.zaakpay.com/api/paymentTransact/V13",
                     requestBody
                 }

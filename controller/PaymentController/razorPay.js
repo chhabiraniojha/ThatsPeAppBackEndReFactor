@@ -699,7 +699,7 @@ exports.paymentStatusCheck = async (req, res) => {
 
         const paymentRecord = await Payment.findOne({
             where: {
-                gatewayTransactionId: paymentId
+                id: paymentId
                 // userId // 🔐 IMPORTANT: prevents others from checking
             }
         });
