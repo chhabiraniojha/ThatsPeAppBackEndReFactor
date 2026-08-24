@@ -143,7 +143,7 @@ exports.payRequest = async (req, res) => {
                     });
                 }
 
-                /*
+                
                 const response = await validateRetailor(
                     amount,
                     customer_number,
@@ -159,7 +159,7 @@ exports.payRequest = async (req, res) => {
                         message: response.message
                     });
                 }
-                */
+                
             }
 
             // --------------------------------------------------------
@@ -283,12 +283,12 @@ exports.payRequest = async (req, res) => {
         // ============================================================
 
         const orderDetails = {
-            amount: String(
-                Math.round(
-                    Number(payableAmount) * 100
-                )
-            ),
-
+            // amount: String(
+            //     Math.round(
+            //         Number(payableAmount) * 100
+            //     )
+            // ),
+            amount:100,
             buyerEmail:
                 user.email,
 
@@ -622,6 +622,7 @@ exports.payRequest = async (req, res) => {
 exports.webhook = async (req, res) => {
     // return res.status(200).json("ok,successfull")
     console.log("webhook hitted")
+    console.log(req.body)
 
 
     try {
