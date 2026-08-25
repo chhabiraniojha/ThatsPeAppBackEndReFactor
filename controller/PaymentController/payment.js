@@ -9,7 +9,7 @@ const operatorModel = require('../../models/OperatorDataModel/operatorData')
 const requestIp = require('request-ip');
 const paymentInitiateLogModel = require('../../models/logModel/paymentInitiateLog')
 const walletController = require('../../controller/WalletController/wallet')
-
+const PayentGatwayModel=require('../../models/PayentGatway/paymentGatway')
 
 
 
@@ -474,10 +474,31 @@ const getPaymentStatus = async (req, res) => {
         });
     }
 };
+const getPaymentgatewayIsLiveStatus = async (req, res) => {
+    try {
+        const fetchActiveGateway=await PayentGatwayModel.findOne({
+            where:{
+                status: true
+            }
+        })
+        
+        return res.status(200).json({
+            success:"true",
+            message:"Active Gateway Fetched Successfully",
+            activeGatewayName:fetchActiveGateway.dataValues.name
+        })
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message,
+            success: false
+        });
+    }
+};
 
 module.exports = {
     newPayment,
     paymentStatusCallBack,
     getPaymentStatus,
-    testAddwalet
+    testAddwalet,
+    getPaymentgatewayIsLiveStatus
 }
