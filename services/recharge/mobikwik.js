@@ -31,7 +31,7 @@ exports.mobikwik = async (data) => {
             "reqid": data.rechargeTransactionId,
             "remitterName": "Suvransu Sekhar Ojha",
             "paymentRefID": data.rechargeTransactionId,
-            "paymentMode": "Wallet",
+            "paymentMode": "Cash",
             "paymentAccountInfo": "7008698408",
 
         };
