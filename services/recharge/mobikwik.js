@@ -32,7 +32,7 @@ exports.mobikwik = async (data) => {
             "remitterName": "Suvransu Sekhar Ojha",
             "paymentRefID": data.rechargeTransactionId,
             "paymentMode": "Cash",
-            "paymentAccountInfo": "7008698408",
+            "paymentAccountInfo": "Cash Payment",
 
         };
         const encryptedData = encryptPayload(payload);
