@@ -148,8 +148,8 @@ exports.payBill = async ({ customerNo,
             "reqid": rechargeTransactionId,
             "remitterName": "Suvransu Sekhar Ojha",
             "paymentRefID": rechargeTransactionId,
-            "paymentMode": "Wallet",
-            "paymentAccountInfo": "7008698408",
+            "paymentMode": "Cash",
+            "paymentAccountInfo": "Cash Payment",
             "ad1": circleCode
 
         };
