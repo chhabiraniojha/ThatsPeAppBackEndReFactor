@@ -151,6 +151,7 @@ exports.payRequest = async (req, res) => {
                     circleData.mobikwik_circle_code,
                     planCode
                 );
+                console.log(response)
 
                 if (response.status === "FAILED") {
                     return res.status(200).json({
