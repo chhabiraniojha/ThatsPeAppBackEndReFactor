@@ -250,6 +250,10 @@ exports.validateRetailor = async (amt, cn,op, cir, planCode) => {
                 timeout: 30000 // 30 sec timeout
             }
         );
+        
+        console.log("response from mobikwik servises.....................",response)
+
+
         if (response.data.success && response.data.data.status == "RECHARGEVALIDATIONSUCCESS") {
             return {
                 status: 'SUCCESS',
