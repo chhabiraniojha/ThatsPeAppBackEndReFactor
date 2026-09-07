@@ -49,7 +49,7 @@ exports.mobikwik = async (data) => {
                 timeout: 30000 // 30 sec timeout
             }
         );
-        console.log(response)
+        console.log("response from retailer api is ------------------",response)
         if (response.data.success && response.data.data.status == "SUCCESS") {
             await updateVendorAttempt({
                 rechargeTransactionId: data.rechargeTransactionId,
