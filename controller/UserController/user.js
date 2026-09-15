@@ -110,12 +110,6 @@ exports.signup = async (req, res) => {
     let id = await uid();
     const status = 'active';
 
-    // Check if email already exists
-    let userEmail = await userModel.findOne({ where: { email } });
-    if (userEmail) {
-      await t.rollback();
-      return res.status(200).json({ message: 'Email id already exists', success: false, statuscode: 0, token: null });
-    }
 
     // Check if mobile number already exists
     let userMobileNumber = await userModel.findOne({ where: { mobileNo } });
