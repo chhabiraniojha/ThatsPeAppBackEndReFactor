@@ -8,7 +8,7 @@ const {
 
 const {
     getLookupData,
-} = require("../../services/mobikwikServices/mobiKwikLookupResolver");
+} = require("../../services/mobikwikServices/mobikwikLookupResolver");
 
 const logger = require("../../util/logger");
 
