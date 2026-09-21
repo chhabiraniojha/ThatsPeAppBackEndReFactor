@@ -1,81 +1,137 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../../util/db_connect');
-const User = require('../../models/UserModels/UserSchema/user');
-const rechargeAndBillPaymentTransactions = require('../RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
-const SubCategory = require('../SubCategoryModel/subCategory');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../../util/db_connect");
 
-const Ticket = sequelize.define('Ticket', {
-  id: {
-    type: DataTypes.STRING,
-    primaryKey: true
-  },
-  userId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    references: {
-      model: User,
-      key: 'id'
+const User = require("../UserModels/UserSchema/user");
+const Order = require("../OrderModel/order");
+
+const Ticket = sequelize.define(
+  "Ticket",
+  {
+    id: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      primaryKey: true,
     },
-    onDelete: 'CASCADE'
-  },
-  executiveId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    references: {
-      model: 'Admins',
-      key: 'AdminId'
+
+    userId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: {
+        model: User,
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     },
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
-  },
-  transactionId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    references: {
-      model: rechargeAndBillPaymentTransactions,
-      key: 'id'
+
+    executiveId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
     },
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
+
+    orderId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: {
+        model: Order,
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
+
+    ticketDescription: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+
+    resolveMessage: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+
+    status: {
+      type: DataTypes.ENUM("open", "close"),
+      allowNull: false,
+      defaultValue: "open",
+    },
+
+    resolveStatus: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+
+    interveneStatus: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+
+    requestingStatus: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+
+    ticketSubCategory: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
   },
-  ticketDescription: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  resolveMessage: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  status: {
-    type: DataTypes.ENUM('open', 'close'),
-    allowNull: false,
-    defaultValue: 'open'
-  },
-  resolveStatus: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  interveneStatus: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  requestingStatus: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  ticketSubCategory: {
-    type: DataTypes.STRING,
-    allowNull: false
+  {
+    tableName: "Tickets",
+    timestamps: true,
+
+    indexes: [
+      {
+        fields: ["userId"],
+        name: "idx_ticket_user_id",
+      },
+      {
+        fields: ["orderId"],
+        name: "idx_ticket_order_id",
+      },
+      {
+        fields: ["executiveId"],
+        name: "idx_ticket_executive_id",
+      },
+      {
+        fields: ["status"],
+        name: "idx_ticket_status",
+      },
+      {
+        fields: ["ticketSubCategory"],
+        name: "idx_ticket_subcategory",
+      },
+      {
+        fields: ["createdAt"],
+        name: "idx_ticket_created_at",
+      },
+    ],
   }
+);
+
+// User → Tickets
+User.hasMany(Ticket, {
+  foreignKey: "userId",
+  as: "tickets",
 });
 
-// User.hasMany(Ticket, { foreignKey: 'userId' });
-// Ticket.belongsTo(User, { foreignKey: 'userId' });
+Ticket.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+});
 
-// rechargeAndBillPaymentTransactions.hasMany(Ticket, { foreignKey: 'transactionId' });
-// Ticket.belongsTo(rechargeAndBillPaymentTransactions, { foreignKey: 'transactionId' });
+// Order → Tickets
+Order.hasMany(Ticket, {
+  foreignKey: "orderId",
+  as: "tickets",
+});
+
+Ticket.belongsTo(Order, {
+  foreignKey: "orderId",
+  as: "order",
+});
 
 module.exports = Ticket;

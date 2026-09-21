@@ -1,109 +1,169 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../util/db_connect");
-const AvailableAPIs = require("../APIModels/api");
+
 const User = require("../UserModels/UserSchema/user");
+const Order = require("../OrderModel/order");
+const Payment = require("../PaymentModel/payment");
+const WalletTransaction = require("../WalletModels/Wallet Transaction/walletTransaction");
 
-const RechargeAndBillPayTransaction = sequelize.define("AllTransactions", {
-  id: {
-    type: DataTypes.STRING,
-    primaryKey: true,
-  },
-  apiTransactionId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    references: {
-      model: AvailableAPIs,
-      key: "id",
+const TransactionHistory = sequelize.define(
+  "TransactionHistory",
+  {
+    id: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      primaryKey: true,
     },
-    onDelete: "SET NULL",
-    onUpdate: "CASCADE",
-  },
-  customerNo: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  amount: {
-    type: DataTypes.FLOAT,
-    allowNull: false,
-  },
-  discountedAmount: {
-    type: DataTypes.FLOAT,
-    allowNull: false,
-    // defaultValue:0.00
-  },
-  operator: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  circle: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  circleCode: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  operatorCode: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  cashPaymentTransactionId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    unique: 'RechargeAndBillPayTransaction_cashPaymentTransactionId_unique',
-  },
-  walletPaymentTransactionId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    unique: 'RechargeAndBillPayTransaction_WalletPaymentTransactionId_unique',
-  },
-  paymentTransactionType: {
-    type: DataTypes.ENUM("cash", "wallet"),
-    allowNull: false,
-  },
-  status: {
-    type: DataTypes.ENUM('CREATED', 'PROCESSING', 'SUCCESS', 'FAILED', 'PENDING'),
-    allowNull: false,
-  },
-  refundStatus: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-  },
-  userId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    references: {
-      model: User,
-      key: 'id'
+
+    orderId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: {
+        model: Order,
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     },
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
 
-  },
-
-  subCategoryId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    references: {
-      model: 'SubCategories',
-      key: 'id'
+    userId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: {
+        model: User,
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     },
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE'
 
-  },
-  commission: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    defaultValue: 0.00
-  },
+    paymentMethod: {
+      type: DataTypes.ENUM("UPI", "WALLET", "COMBO"),
+      allowNull: false,
+    },
 
-  distributedCommission: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    defaultValue: 0.00
+    amount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+
+    onlineTransactionId: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      references: {
+        model: Payment,
+        key: "id",
+      },
+      onDelete: "SET NULL",
+      onUpdate: "CASCADE",
+    },
+
+    walletTransactionId: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      references: {
+        model: WalletTransaction,
+        key: "id",
+      },
+      onDelete: "SET NULL",
+      onUpdate: "CASCADE",
+    },
+
+    status: {
+      type: DataTypes.ENUM(
+        "CREATED",
+        "PROCESSING",
+        "PENDING",
+        "SUCCESS",
+        "FAILED"
+      ),
+      allowNull: false,
+    },
   },
+  {
+    tableName: "TransactionHistories",
+    timestamps: true,
+
+    indexes: [
+      {
+        unique: true,
+        fields: ["orderId"],
+        name: "uq_transaction_history_order_id",
+      },
+      {
+        fields: ["userId"],
+        name: "idx_transaction_history_user_id",
+      },
+      {
+        fields: ["paymentMethod"],
+        name: "idx_transaction_history_payment_method",
+      },
+      {
+        fields: ["status"],
+        name: "idx_transaction_history_status",
+      },
+      {
+        fields: ["createdAt"],
+        name: "idx_transaction_history_created_at",
+      },
+      {
+        fields: ["onlineTransactionId"],
+        name: "idx_transaction_history_online_transaction_id",
+      },
+      {
+        fields: ["walletTransactionId"],
+        name: "idx_transaction_history_wallet_transaction_id",
+      },
+    ],
+  }
+);
+
+/* Order */
+
+Order.hasOne(TransactionHistory, {
+  foreignKey: "orderId",
+  as: "transactionHistory",
 });
 
-module.exports = RechargeAndBillPayTransaction;
+TransactionHistory.belongsTo(Order, {
+  foreignKey: "orderId",
+  as: "order",
+});
+
+/* User */
+
+User.hasMany(TransactionHistory, {
+  foreignKey: "userId",
+  as: "transactionHistories",
+});
+
+TransactionHistory.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+});
+
+/* Payment */
+
+Payment.hasMany(TransactionHistory, {
+  foreignKey: "onlineTransactionId",
+  as: "transactionHistories",
+});
+
+TransactionHistory.belongsTo(Payment, {
+  foreignKey: "onlineTransactionId",
+  as: "onlinePayment",
+});
+
+/* Wallet Transaction */
+
+WalletTransaction.hasMany(TransactionHistory, {
+  foreignKey: "walletTransactionId",
+  as: "transactionHistories",
+});
+
+TransactionHistory.belongsTo(WalletTransaction, {
+  foreignKey: "walletTransactionId",
+  as: "walletTransaction",
+});
+
+module.exports = TransactionHistory;

@@ -1,179 +1,511 @@
+const { Op } = require('sequelize');
 const MobileOtpModel = require('../../models/OtpModels/MobileOtp');
 const userModel = require('../../models/UserModels/UserSchema/user');
 const Sequelize = require('sequelize');
 let { sendEmail } = require('../../util/nodeMailerConfig');
-const Logger = require('../../util/logData');
 const { sendSms } = require('../../util/sendSms');
-const { Op } = require('sequelize');
-var jwt = require('jsonwebtoken');
+const Sentry = require("@sentry/node");
+const logger = require("../../util/logger");
+const generateUUID = require("../../util/uidGenerator")
 
-function generateRandomNumber() {
-  // Generate a random decimal between 0 (inclusive) and 1 (exclusive)
-  const randomDecimal = Math.random();
+const {
+  generateRandomNumber,
+  generateDateInTwoMinutes
+} = require("../../util/otp/otpUtils");
 
-  // Multiply the decimal by 900000 to get a number between 0 and 899999
-  // Add 100000 to ensure the number is at least 100000
-  const randomNumber = Math.floor(randomDecimal * 900000) + 100000;
+const {
+  generateAccessToken,
+  generateSignupAccessToken
+} = require("../../util/generateToken");
 
-  return randomNumber;
-}
 
-function generateDateInTwoMinutes() {
-  // Get the current date and time
-  const currentDate = new Date();
+// ===============================
+// OTP CONFIGURATION
+// ===============================
 
-  // Add 2 minutes to the current date and time
-  currentDate.setMinutes(currentDate.getMinutes() + 10);
+const OTP_RESEND_INTERVAL_SECONDS = 60;
+const MAX_OTP_PER_DAY = 5;
 
-  // Format the date to a string (optional, you can adjust the format as needed)
-  // const formattedDate = currentDate.toISOString();
+// Google Play / testing ke liye fixed mobile numbers
+const testMobileNumbers = (process.env.TEST_OTP_MOBILE_NUMBERS || "")
+  .split(",")
+  .map((number) => number.trim())
+  .filter(Boolean);
 
-  return currentDate;
-}
-const generateAccessToken = (newUser) => {
-  return jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET_KEY);
-};
-const generateSignupAccessToken = (mobileNo) => {
-  return jwt.sign({ mobileNo: mobileNo.mobileNo }, process.env.JWT_SECRET_KEY);
-};
-// sendOtp()
+const TEST_OTP = process.env.TEST_OTP || "000000";
+
+
+//==================================
+//send otp
+//==================================
+
 exports.smsSendOtp = async (req, res) => {
   let { mobileNo } = req.body;
 
-  if (typeof mobileNo === 'string') {
-    mobileNo = mobileNo.trim();
-  }
-
   try {
-    // Basic input validation
-    if (!mobileNo) {
-      return res.status(400).json({ message: 'Mobile Number is required', success: false });
+
+    // ========================================
+    // 1. Normalize mobile number
+    // ========================================
+
+    if (typeof mobileNo === "string") {
+      mobileNo = mobileNo.trim();
     }
+
+
+    // ========================================
+    // 2. Validate mobile number
+    // ========================================
+
+    if (!mobileNo) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number is required"
+      });
+    }
+
+    if (!/^[6-9]\d{9}$/.test(mobileNo)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid mobile number"
+      });
+    }
+
+
+    // ========================================
+    // 3. Today's date range
+    // ========================================
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    //check otp send time limit 1 minute
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+
+    // ========================================
+    // 4. Check daily OTP limit
+    // ========================================
+
+    const todaysOtpCount = await MobileOtpModel.count({
+      where: {
+        mobileNo,
+        createdAt: {
+          [Op.between]: [
+            startOfToday,
+            endOfToday
+          ]
+        }
+      }
+    });
+
+    if (todaysOtpCount >= MAX_OTP_PER_DAY) {
+
+      logger.warn("Daily OTP limit exceeded", {
+        route: "/user/send-sms-otp",
+        mobileLast4: mobileNo.slice(-4),
+        otpCount: todaysOtpCount
+      });
+
+      return res.status(429).json({
+        success: false,
+        message: "Daily OTP limit exceeded. Please try again tomorrow."
+      });
+    }
+
+
+    // ========================================
+    // 5. Check resend interval
+    // ========================================
+
     const existingOtpRecord = await MobileOtpModel.findOne({
       where: {
         mobileNo,
         createdAt: {
-          [Op.gte]: startOfToday // only today’s OTP
+          [Op.gte]: startOfToday
         }
       },
-      order: [['createdAt', 'DESC']],
-      limit: 1
+      order: [
+        ["createdAt", "DESC"]
+      ]
     });
 
-    if(existingOtpRecord){
-    const now = new Date();
-    const diff = (now - existingOtpRecord.createdAt) / 1000; // seconds
+    if (existingOtpRecord) {
 
-    if(diff < 60){
-        return res.status(200).json({
-            success: false,
-            statuscode: 0,
-            message: "OTP already sent, please wait 1 minute"
+      const now = new Date();
+
+      const diffInSeconds =
+        (
+          now.getTime() -
+          new Date(
+            existingOtpRecord.createdAt
+          ).getTime()
+        ) / 1000;
+
+      if (
+        diffInSeconds <
+        OTP_RESEND_INTERVAL_SECONDS
+      ) {
+
+        const remainingSeconds = Math.ceil(
+          OTP_RESEND_INTERVAL_SECONDS -
+          diffInSeconds
+        );
+
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${remainingSeconds} seconds before requesting another OTP`
         });
+      }
     }
-  }
 
-    // Generate OTP and expiration time
-    
-    const otp = generateRandomNumber();
-    const expirationTime = generateDateInTwoMinutes();
 
-    // Save OTP record in otpModel
-    if(mobileNo=="9938300585"){
-      const defaultOtp="000000"
-      const insertRecord1 = await MobileOtpModel.create({ mobileNo, otp:defaultOtp, expirationTime });
-      return res.status(200).json({ success: true, message: 'OTP sent successfully', statuscode: 1});
+    // ========================================
+    // 6. Check Google Play test number
+    // ========================================
+
+    const isTestMobile =
+      testMobileNumbers.includes(mobileNo);
+
+
+    // ========================================
+    // 7. Generate OTP
+    // ========================================
+
+    const otp = isTestMobile
+      ? TEST_OTP
+      : generateRandomNumber();
+
+
+    // ========================================
+    // 8. Generate expiration time
+    // ========================================
+
+    const expirationTime =
+      generateDateInTwoMinutes();
+
+
+    // ========================================
+    // 9. Send SMS
+    // ========================================
+
+    // Test number ke liye SMS nahi bhejna
+    if (!isTestMobile) {
+
+      try {
+
+        await sendSms(
+          mobileNo,
+          otp
+        );
+
+      } catch (smsError) {
+
+        logger.error(
+          "OTP SMS provider failed",
+          {
+            route: "/user/send-sms-otp",
+            mobileLast4: mobileNo.slice(-4),
+            errorName:
+              smsError?.name ||
+              "SMS_PROVIDER_ERROR",
+            errorMessage:
+              smsError?.message ||
+              "SMS provider request failed"
+          }
+        );
+
+        Sentry.captureException(
+          smsError
+        );
+
+        return res.status(502).json({
+          success: false,
+          message:
+            "Unable to send OTP. Please try again later."
+        });
+      }
     }
-    const insertRecord = await MobileOtpModel.create({ mobileNo, otp, expirationTime });
-    // Send OTP via sms
-    const response = await sendSms(mobileNo, otp);
-    console.log('response of sms send ', response);
 
-    // Return success response
-    return res.status(200).json({ success: true, message: 'OTP sent successfully', statuscode: 1, response });
-  } catch (error) {
-    console.log(error);
-    Logger.error({
-      error_message: error ? error.name : 'catch error form otpsend ',
-      user: mobileNo,
-      url: '/user/send-sms-otp',
-      http_method: 'post',
-      status_code: '0'
+
+    // ========================================
+    // 10. Save OTP in database
+    // ========================================
+
+    await MobileOtpModel.create({
+      id: await generateUUID(),
+      mobileNo,
+      otp,
+      expirationTime
     });
-    return res.status(500).json({ error, message: 'Internal server error' });
+
+
+    // ========================================
+    // 11. Log successful OTP request
+    // ========================================
+
+    logger.info(
+      "OTP sent successfully",
+      {
+        route: "/user/send-sms-otp",
+        mobileLast4: mobileNo.slice(-4),
+        testMobile: isTestMobile
+      }
+    );
+
+
+    // ========================================
+    // 12. Success response
+    // ========================================
+    console.log("Sending OTP response");
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully"
+    });
+
+  } catch (error) {
+
+    // ========================================
+    // Unexpected error
+    // ========================================
+
+    logger.error(
+      "Unexpected error while sending OTP",
+      {
+        route: "/user/send-sms-otp",
+        mobileLast4: mobileNo
+          ? mobileNo.slice(-4)
+          : undefined,
+        errorName:
+          error?.name ||
+          "UNKNOWN_ERROR",
+        errorMessage:
+          error?.message ||
+          "Unknown error"
+      }
+    );
+
+    Sentry.captureException(
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
   }
 };
+
+
+
+
+// ========================================
+// VERIFY SMS OTP
+// ========================================
 
 exports.verifyOtp = async (req, res) => {
   let { mobileNo, otp } = req.body;
 
-  // console.log(otp);
-  if (typeof mobileNo === 'string') {
-    mobileNo = mobileNo.trim();
-  }
-
   try {
-    const userRecords = await MobileOtpModel.findAll({
+
+    // ========================================
+    // 1. Normalize input
+    // ========================================
+
+    if (typeof mobileNo === "string") {
+      mobileNo = mobileNo.trim();
+    }
+
+    if (typeof otp === "string") {
+      otp = otp.trim();
+    }
+
+
+    // ========================================
+    // 2. Validate mobile number
+    // ========================================
+
+    if (!mobileNo) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number is required"
+      });
+    }
+
+    if (!/^[6-9]\d{9}$/.test(mobileNo)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid mobile number"
+      });
+    }
+
+
+    // ========================================
+    // 3. Validate OTP
+    // ========================================
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP is required"
+      });
+    }
+
+
+    // ========================================
+    // 4. Find latest unverified & valid OTP
+    // ========================================
+
+    const otpRecord = await MobileOtpModel.findOne({
       where: {
         mobileNo,
+        isVerified: false,
         expirationTime: {
-          [Sequelize.Op.gte]: new Date()
+          [Op.gte]: new Date()
         }
       },
-      order: [['expirationTime', 'DESC']]
+      order: [
+        ["createdAt", "DESC"]
+      ]
     });
-    console.log(userRecords);
 
-    if (userRecords.length <= 0) {
-      return res.status(200).json({ success: false, message: 'otp mismatch or expired', statuscode: 0 });
-    } else {
-      if (userRecords && otp == userRecords[0].otp) {
-        const userData = await userModel.findOne({ where: { mobileNo } });
-        // console.log('userDataxxxxxxxxxxxxxxxxxxxxxxxxxxxx', userData.dataValues);
 
-        if (userData) {
-          let userDetails = userData?.dataValues;
-          // delete userDetails?.dataValues.password;
-          // console.log('userData---', userData?.dataValues);
-          return res.status(200).json({
-            success: true,
-            message: 'otp successfully verified ',
-            statuscode: 1,
-            token: generateAccessToken(userDetails),
-            userDetails
-          });
-        } else {
-          let signupToken = generateSignupAccessToken({ mobileNo });
+    // ========================================
+    // 5. OTP not found / expired / already verified
+    // ========================================
 
-          return res.status(200).json({
-            success: true,
-            message: 'otp successfully verified and user does not exist ',
-            statuscode: 1,
-            token: null,
-            userDetails: null,
-            signupToken
-          });
+    if (!otpRecord) {
+
+      logger.warn(
+        "OTP verification failed - OTP not found, expired or already verified",
+        {
+          route: "/user/verify-sms-otp",
+          mobileLast4: mobileNo.slice(-4)
         }
+      );
 
-        return res.status(200).json({ success: true, message: 'otp successfully verified', statuscode: 1 });
-      } else {
-        return res.status(200).json({ success: false, message: 'otp mismatch or expired', statuscode: 0 });
-      }
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired OTP"
+      });
     }
-  } catch (error) {
-    console.log(error);
-    Logger.error({
-      error_message: error ? error.name : 'catch error form otp varification',
-      user: mobileNo,
-      url: '/user/otp-verify',
-      http_method: 'post',
-      status_code: '0'
+
+
+    // ========================================
+    // 6. Compare OTP
+    // ========================================
+
+    if (String(otp) !== String(otpRecord.otp)) {
+
+      logger.warn(
+        "OTP verification failed - invalid OTP",
+        {
+          route: "/user/verify-sms-otp",
+          mobileLast4: mobileNo.slice(-4)
+        }
+      );
+
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired OTP"
+      });
+    }
+
+
+    // ========================================
+    // 7. Mark OTP as verified
+    // ========================================
+
+    await otpRecord.update({
+      isVerified: true
     });
-    return res.status(500).json({ success: false, error, message: 'internal server error' });
+
+
+    // ========================================
+    // 8. Log successful verification
+    // ========================================
+
+    logger.info(
+      "OTP verified successfully",
+      {
+        route: "/user/verify-sms-otp",
+        mobileLast4: mobileNo.slice(-4)
+      }
+    );
+
+
+    // ========================================
+    // 9. Check user
+    // ========================================
+
+    const userData = await userModel.findOne({
+      where: {
+        mobileNo
+      }
+    });
+
+
+    // ========================================
+    // 10. Existing user
+    // ========================================
+
+    if (userData) {
+
+      const userDetails = userData.toJSON();
+
+      const token = generateAccessToken(userDetails);
+
+      return res.status(200).json({
+        success: true,
+        message: "OTP successfully verified",
+        token,
+        userDetails
+      });
+    }
+
+
+    // ========================================
+    // 11. New user
+    // ========================================
+
+    const signupToken = generateSignupAccessToken({
+      mobileNo
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP successfully verified and user does not exist",
+      token: null,
+      userDetails: null,
+      signupToken
+    });
+
+
+  } catch (error) {
+
+    // ========================================
+    // 12. Unexpected error
+    // ========================================
+
+    logger.error(
+      "Unexpected error during OTP verification",
+      {
+        route: "/user/verify-sms-otp",
+        mobileLast4: mobileNo
+          ? mobileNo.slice(-4)
+          : undefined,
+        errorName:
+          error?.name || "UNKNOWN_ERROR",
+        errorMessage:
+          error?.message || "Unknown error"
+      }
+    );
+
+    Sentry.captureException(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
   }
 };

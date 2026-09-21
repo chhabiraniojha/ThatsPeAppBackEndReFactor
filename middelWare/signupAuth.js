@@ -1,60 +1,154 @@
-const Users = require('../models/UserModels/UserSchema/user');
-const jwt = require('jsonwebtoken');
-const Logger = require('../util/logData');
+const jwt = require("jsonwebtoken");
+const Sentry = require("@sentry/node");
+
+const logger = require("../util/logger");
 
 const SignupTokenVerify = async (req, res, next) => {
-  const token = req.header('authorization');
 
   try {
-    // console.log(token)
 
-    // Check if token exists
+    // ========================================
+    // 1. Get authorization token
+    // ========================================
+
+    const token = req.header("authorization");
+
     if (!token) {
-      return res.status(200).json({
-        message: 'Authorization token is missing',
+      return res.status(401).json({
         success: false,
-        statuscode: 5
+        message: "Authorization token is missing"
       });
     }
-    const decodeData = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    const mobileNo = decodeData.mobileNo;
-    console.log('Mobile No --- >', mobileNo);  
 
-     
+
+    // ========================================
+    // 2. Verify token
+    // ========================================
+
+    const decodeData = jwt.verify(
+      token,
+      process.env.JWT_SECRET_KEY
+    );
+
+
+    // ========================================
+    // 3. Get mobile number from token
+    // ========================================
+
+    const mobileNo = decodeData?.mobileNo;
+
+
+    // ========================================
+    // 4. Validate mobile number
+    // ========================================
+
+    if (!mobileNo) {
+
+      logger.warn(
+        "Signup token does not contain mobile number",
+        {
+          route: "/user/signup"
+        }
+      );
+
+      return res.status(401).json({
+        success: false,
+        message: "Invalid signup token"
+      });
+    }
+
+
+    if (!/^[6-9]\d{9}$/.test(mobileNo)) {
+
+      logger.warn(
+        "Invalid mobile number in signup token",
+        {
+          route: "/user/signup"
+        }
+      );
+
+      return res.status(401).json({
+        success: false,
+        message: "Invalid signup token"
+      });
+    }
+
+
+    // ========================================
+    // 5. Attach mobile number to request
+    // ========================================
+
     req.mobileNo = mobileNo;
-    if (mobileNo) {     
 
-      next();
-    } else {
-      return res.status(200).json({ message: 'token failed or mobileNo does not exists', success: false, statuscode: 5 });
-    }
+
+    // ========================================
+    // 6. Continue to signup controller
+    // ========================================
+
+    next();
+
   } catch (error) {
-    console.log(error);
-    Logger.error({
-      error_message: error ? error.name : 'catch error form Authentication ',
-      user: token,
-      url: '/user/token-check',
-      http_method: 'get',
-      status_code: '5'
-    });
-    if (error.name === 'TokenExpiredError') {
-      return res.status(200).json({
-        message: 'Token has expired',
+
+    // ========================================
+    // 7. Token expired
+    // ========================================
+
+    if (error.name === "TokenExpiredError") {
+
+      logger.warn(
+        "Signup token expired",
+        {
+          route: "/user/signup"
+        }
+      );
+
+      return res.status(401).json({
         success: false,
-        statuscode: 5
+        message: "Signup token has expired"
       });
     }
 
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(200).json({
-        message: 'Invalid token',
+
+    // ========================================
+    // 8. Invalid token
+    // ========================================
+
+    if (error.name === "JsonWebTokenError") {
+
+      logger.warn(
+        "Invalid signup token",
+        {
+          route: "/user/signup"
+        }
+      );
+
+      return res.status(401).json({
         success: false,
-        statuscode: 5
+        message: "Invalid signup token"
       });
     }
+
+
+    // ========================================
+    // 9. Unexpected error
+    // ========================================
+
+    logger.error(
+      "Unexpected error during signup token verification",
+      {
+        route: "/user/signup",
+        errorName:
+          error?.name || "UNKNOWN_ERROR",
+        errorMessage:
+          error?.message || "Unknown error"
+      }
+    );
+
+    Sentry.captureException(error);
+
     return res.status(500).json({
-      message: 'Internal server error',
-      error
+      success: false,
+      message: "Internal server error"
     });
   }
 };

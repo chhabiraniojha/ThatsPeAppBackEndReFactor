@@ -1,135 +1,183 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../../util/db_connect');
-const Order = require('../OrderModel/order');
-const User = require('../UserModels/UserSchema/user');
-const WalletOrder = require('../OrderModel/walletOrder');
-const PaymentGateway = require('../PayentGatway/paymentGatway');
+const { DataTypes } = require("sequelize");
 
-const Payment = sequelize.define('Payment', {
-  id: {
-    type: DataTypes.STRING,
-    primaryKey: true
-  },
+const sequelize = require("../../util/db_connect");
 
-  orderId: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
-    references: {
-      model: Order, // refers to orders table
-      key: 'id'
-    },
-    unique: 'Payment_orderId_unique',
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE'
-  },
-  walletOrderId: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
-    references: {
-      model: WalletOrder, // refers to orders table
-      key: 'id'
-    },
-    unique: 'Payment_walletOrderId_unique',
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE'
-  },
-  userId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    references: {
-      model: User,
-      key: 'id'
-    },
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
-  },
+const Order = require("../OrderModel/order");
+const User = require("../UserModels/UserSchema/user");
+const PaymentGateway = require("../PayentGatway/paymentGatway");
 
-  gateway: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    defaultValue: 'VEGAH'
-  },
-  gatewayId: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    references: {
-      model: PaymentGateway,
-      key: 'id'
-    },
-    defaultValue: 'BqvhSS7CPJu2UEZmjmQhfg',  // this is only  for vegah upi  BUT in future if we add more gateways we can change this value accordingly
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
-  },
-
-  paymentMode: {
-    type: DataTypes.ENUM('UPI'),
-    allowNull: true
-  },
-
-  gatewayTransactionId: {
-    type: DataTypes.STRING(50),
-    allowNull: true
-  },
-  // Razorpay Specific
-  razorpayOrderId: {
-    type: DataTypes.STRING(100),
-    allowNull: true,
-    unique: true
-  },
-
-  razorpaySignature: {
-    type: DataTypes.STRING(255),
-    allowNull: true
-  },
-
-  rrn: {
-    type: DataTypes.STRING(50),
-    allowNull: true
-  },
-
-  amount: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false
-  },
-
-  status: {
-    type: DataTypes.ENUM('INITIATED', 'SUCCESS', 'FAILED'),
-    allowNull: false,
-    defaultValue: 'INITIATED'
-  },
-  isUsed: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  purpose: {
-    type: DataTypes.ENUM('recharge', 'addfund'),
-    allowNull: true
-  },
-  responseCode: {
-    type: DataTypes.STRING(10),
-    allowNull: true
-  },
-
-  rawCallback: {
-    type: DataTypes.JSON,
-    allowNull: true
-  }
-
-},
+const Payment = sequelize.define(
+  "Payment",
   {
-    tableName: 'payments',
+    id: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      primaryKey: true,
+    },
+
+    orderId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: {
+        model: Order,
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
+
+    userId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: {
+        model: User,
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
+
+    gatewayId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: {
+        model: PaymentGateway,
+        key: "id",
+      },
+      onDelete: "RESTRICT",
+      onUpdate: "CASCADE",
+    },
+
+    paymentMode: {
+      type: DataTypes.ENUM(
+        "UPI",
+        "DEBIT_CARD",
+        "CREDIT_CARD",
+        "NET_BANKING"
+      ),
+      allowNull: false,
+    },
+
+    amount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+
+    gatewayTransactionId: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+
+    gatewayOrderId: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+
+    rrn: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+
+    signature: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+
+    status: {
+      type: DataTypes.ENUM(
+        "INITIATED",
+        "SUCCESS",
+        "FAILED"
+      ),
+      allowNull: false,
+      defaultValue: "INITIATED",
+    },
+
+    isUsed: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+
+    responseCode: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+
+    rawCallback: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+  },
+  {
+    tableName: "Payments",
     timestamps: true,
 
     indexes: [
       {
-        name: 'uniq_gateway_txn',
+        fields: ["orderId"],
+        name: "idx_payment_order_id",
+      },
+      {
+        fields: ["userId"],
+        name: "idx_payment_user_id",
+      },
+      {
+        fields: ["gatewayId"],
+        name: "idx_payment_gateway_id",
+      },
+      {
+        fields: ["paymentMode"],
+        name: "idx_payment_mode",
+      },
+      {
+        fields: ["status"],
+        name: "idx_payment_status",
+      },
+      {
         unique: true,
-        fields: ['gatewayId', 'gatewayTransactionId']
-      }
-    ]
+        fields: ["gatewayId", "gatewayTransactionId"],
+        name: "uq_payment_gateway_transaction",
+      },
+      {
+        unique: true,
+        fields: ["gatewayId", "gatewayOrderId"],
+        name: "uq_payment_gateway_order",
+      },
+    ],
   }
-
 );
+
+/* Associations */
+
+Order.hasOne(Payment, {
+  foreignKey: "orderId",
+  as: "payment",
+});
+
+Payment.belongsTo(Order, {
+  foreignKey: "orderId",
+  as: "order",
+});
+
+User.hasMany(Payment, {
+  foreignKey: "userId",
+  as: "payments",
+});
+
+Payment.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+});
+
+PaymentGateway.hasMany(Payment, {
+  foreignKey: "gatewayId",
+  as: "payments",
+});
+
+Payment.belongsTo(PaymentGateway, {
+  foreignKey: "gatewayId",
+  as: "gateway",
+});
 
 module.exports = Payment;

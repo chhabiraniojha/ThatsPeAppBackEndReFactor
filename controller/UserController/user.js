@@ -1,23 +1,29 @@
 var jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const userModel = require('../../models/UserModels/UserSchema/user');
-const otpModel = require('../../models/OtpModels/Otp');
+const userModel = require("../../models/UserModels/UserSchema/user");
 const walletModel = require('../../models/WalletModels/WalletSchema/wallet');
 let uid = require('../../util/uidGenerator');
 const sequelize = require('../../util/db_connect');
 let { sendEmail } = require('../../util/nodeMailerConfig');
-let { sendOtp, verifyOtp } = require('../../controller/OtpController/Otp');
 const { use } = require('../../routes/userRoutes/userRouter');
 const { default: axios } = require('axios');
-const Logger = require('../../util/logData');
+const logger = require('../../util/logger');
+const { Op } = require("sequelize");
+const Sentry = require("@sentry/node");
+const ReferralConfig = require("../../models/ReferralModel/ReferralConfig");
+const Referral = require("../../models/ReferralModel/Referral");
+
+const {
+  generateAccessToken,
+} = require("../../util/generateToken");
+
+const {
+  generateReferralCode,
+} = require("../../util/generateReferralCode");
 
 let algorithm = 'aes-256-ctr';
 let ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 let IV_LENGTH = 16;
-
-const generateAccessToken = (newUser) => {
-  return jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
-};
 
 const encrypt = (text) => {
   let iv = crypto.randomBytes(IV_LENGTH);
@@ -51,152 +57,282 @@ const decrypt = (text) => {
 //------------------ SIGNUP --------------
 
 // let message = "your otp is 1234 this is a test otp"
+// ------------------ SIGNUP --------------
+
 exports.signup = async (req, res) => {
-  let { name, email, referCode } = req.body;
-//   const authHeader = req.headers.authorization;
-  let t = null; // Declare t outside the try block
- 
-  if (typeof email === 'string') {
-    email = email.trim();
-  }
-  // password = password.trim()
-
-  // Check if req.body is not valid JSON
-
-  // Check if mobile number length is at least 10 characters
-  // if (mobileNo.length < 10 || mobileNo.length > 13) {
-  //     return res.status(200).json({
-  //         success: false,
-  //         statuscode: 0,
-  //         message: "Mobile number must be at least 10 digits long."
-  //     });
-  // }
-  // if (password && password.length < 6) {
-  //     return res.status(200).json({
-  //         success: false,
-  //         statuscode: 0,
-  //         message: "Password should be 6 digits or  greater than 6 digits"
-  //     });
+  let transaction = null;
 
   try {
-    if (typeof req.body !== 'object') {
-      return res.status(200).json({ success: false, statuscode: 0, message: 'Invalid JSON payload' });
-    }
-    // Check if any required field is missing or null
-    if (!name || !email  ) {
-      return res.status(200).json({
+    // --------------------------------
+    // 1. Validate request body
+    // --------------------------------
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({
         success: false,
-        statuscode: 0,
-        message: ' Name and Email is required.'
+        message: "Invalid request body",
       });
     }
-    // const decodeData = jwt.verify(authHeader, process.env.JWT_SECRET_KEY);
-    const mobileNo =  req.mobileNo
- 
-    console.log(name, email, mobileNo);
-    //teting auth token mobile no
 
-    // return res.status(200).json({
-    //   success: false,
-    //   statuscode: 0,
-    //   message: ' testing  auth token',
-    //   mobileNo
-    // });
+    let { name, email, referCode } = req.body;
 
-    // password = encrypt(password);
-    const t = await sequelize.transaction();
-
-    // Generate user id
-    let id = await uid();
-    const status = 'active';
-
-
-    // Check if mobile number already exists
-    let userMobileNumber = await userModel.findOne({ where: { mobileNo } });
-    if (userMobileNumber) {
-      await t.rollback();
-      return res.status(200).json({ message: 'Mobile Number already exists', success: false, statuscode: 0, token: null });
+    if (typeof name === "string") {
+      name = name.trim();
     }
 
-    // // Verify OTP
-    // let otpVerificationStatus;
-    // try {
-    //   otpVerificationStatus = await axios.post(`${process.env.SERVER_BASEUSRL}/verifyotp`, {
-    //     email,
-    //     otp
-    //   });
-    // } catch (otpError) {
-    //   await t.rollback();
-    //   Logger.error({
-    //     error_message: otpError ? otpError.name : 'error form signup otp send ',
-    //     user: email,
-    //     url: '/user/signup',
-    //     http_method: 'post',
-    //     status_code: '0'
-    //   });
-    //   return res.status(200).json({ success: false, message: 'OTP mismatch or expired', statuscode: 0 });
-    // }
-
-    // // Proceed with user signup if OTP verification is successful
-    // if (otpVerificationStatus.data.success) {
-    //   const userDetails = await userModel.create(
-    //     {
-    //       id,
-    //       name,
-    //       email,
-    //       password,
-    //       mobileNo,
-    //       status
-    //     },
-    //     { transaction: t }
-    //   );
-    const userDetails = await userModel.create(
-        {
-          id,
-          name,
-          email,
-        //   password,
-          mobileNo,
-          status
-        },
-        { transaction: t }
-    )
-
-      const walletId = await uid();
-      const amount = 0.0;
-      await walletModel.create(
-        {
-          id: walletId,
-          userId: userDetails.id,
-          amount
-        },
-        { transaction: t }
-      );
-
-      await t.commit();
-      // remove password before sending user
-      delete userDetails.dataValues.password;
-      return res
-        .status(200)
-        .json({ success: true, message: 'User signup successfully', token: generateAccessToken(userDetails), userDetails, statuscode: 1 });
-    }  
-    
-   catch (error) {
-    // console.error('Error in signup:', error);
-    if (t) {
-      await t.rollback();
+    if (typeof email === "string") {
+      email = email.trim();
     }
-    Logger.error({
-      error_message: error ? error.name : 'catch error form signup  ',
-      user: email,
-      url: '/user/signup',
-      http_method: 'post',
-      status_code: '0'
+
+    if (typeof referCode === "string") {
+      referCode = referCode.trim().toUpperCase();
+    }
+
+    if (!name || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Name and email are required",
+      });
+    }
+
+    // --------------------------------
+    // 2. Mobile number from middleware
+    // --------------------------------
+    const mobileNo = req.mobileNo;
+
+    if (!mobileNo) {
+      logger.warn("Mobile number missing during signup", {
+        route: "/user/signup",
+      });
+
+      return res.status(401).json({
+        success: false,
+        message: "Invalid signup request",
+      });
+    }
+
+    // --------------------------------
+    // 3. Start transaction
+    // --------------------------------
+    transaction = await sequelize.transaction();
+
+    // --------------------------------
+    // 4. Check mobile again
+    // --------------------------------
+    const existingUser = await userModel.findOne({
+      where: {
+        mobileNo,
+      },
+      attributes: ["id"],
+      transaction,
     });
-    return res.status(500).json({ success: false, error: error.message, message: 'Internal server error' });
+
+    if (existingUser) {
+      await transaction.rollback();
+      transaction = null;
+
+      return res.status(409).json({
+        success: false,
+        message: "Mobile number already registered",
+      });
+    }
+
+    // --------------------------------
+    // 5. Generate User ID
+    // --------------------------------
+    const userId = await uid();
+
+    // --------------------------------
+    // 6. Generate unique referral code
+    //    Existing project utility
+    // --------------------------------
+    const referralCode = await generateReferralCode(transaction);
+
+    // --------------------------------
+    // 7. Referral details
+    // --------------------------------
+    let referrerUser = null;
+    let referralConfig = null;
+
+    if (referCode) {
+      // Find referrer
+      referrerUser = await userModel.findOne({
+        where: {
+          referralCode: referCode,
+          status: "active",
+        },
+        attributes: ["id", "referralCode"],
+        transaction,
+      });
+
+      if (!referrerUser) {
+        await transaction.rollback();
+        transaction = null;
+
+        return res.status(400).json({
+          success: false,
+          message: "Invalid referral code",
+        });
+      }
+
+      // Get active referral configuration
+      referralConfig = await ReferralConfig.findOne({
+        where: {
+          status: "active",
+        },
+        order: [["createdAt", "DESC"]],
+        transaction,
+      });
+
+      if (!referralConfig) {
+        await transaction.rollback();
+        transaction = null;
+
+        logger.warn("Referral config not available", {
+          route: "/user/signup",
+        });
+
+        return res.status(400).json({
+          success: false,
+          message: "Referral is currently unavailable",
+        });
+      }
+    }
+
+    // --------------------------------
+    // 8. Create User
+    // --------------------------------
+    const userDetails = await userModel.create(
+      {
+        id: userId,
+        mobileNo,
+        name,
+        email,
+        referralCode,
+        referredBy: referrerUser ? referrerUser.id : null,
+        status: "active",
+      },
+      {
+        transaction,
+      }
+    );
+
+    // --------------------------------
+    // 9. Create Wallet
+    // --------------------------------
+    const walletId = await uid();
+
+    await walletModel.create(
+      {
+        id: walletId,
+        userId: userDetails.id,
+        balance: 0.00,
+        status: "active",
+      },
+      {
+        transaction,
+      }
+    );
+
+    // --------------------------------
+    // 10. Create Referral
+    // --------------------------------
+    if (referrerUser && referralConfig) {
+      const referralId = await uid();
+
+      await Referral.create(
+        {
+          id: referralId,
+
+          referrerUserId: referrerUser.id,
+          referredUserId: userDetails.id,
+
+          // Snapshot from ReferralConfig
+          rewardAmount: referralConfig.referrerReward,
+          couponDiscount: referralConfig.couponDiscount,
+          minimumRechargeAmount:
+            referralConfig.minimumRechargeAmount,
+
+          // Reward will be given later
+          rewardStatus: "PENDING",
+
+          rewardWalletTransactionId: null,
+          rewardedAt: null,
+        },
+        {
+          transaction,
+        }
+      );
+    }
+
+    // --------------------------------
+    // 11. Commit transaction
+    // --------------------------------
+    await transaction.commit();
+    transaction = null;
+
+    // --------------------------------
+    // 12. Generate access token
+    // --------------------------------
+    const token = generateAccessToken(userDetails);
+
+    // --------------------------------
+    // 13. Response
+    // --------------------------------
+    return res.status(201).json({
+      success: true,
+      message: "User signup successfully",
+      token,
+      userDetails,
+    });
+
+  } catch (error) {
+    console.log(error)
+    // --------------------------------
+    // Rollback transaction
+    // --------------------------------
+    if (transaction) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        logger.error("Signup transaction rollback failed", {
+          route: "/user/signup",
+          errorName: rollbackError?.name || "UNKNOWN_ERROR",
+          errorMessage:
+            rollbackError?.message || "Unknown rollback error",
+        });
+      }
+    }
+
+    // --------------------------------
+    // Log error
+    // --------------------------------
+    logger.error("Signup failed", {
+      route: "/user/signup",
+      errorName: error?.name || "UNKNOWN_ERROR",
+      errorMessage: error?.message || "Unknown error",
+    });
+
+    Sentry.captureException(error);
+
+    // --------------------------------
+    // Unique constraint error
+    // --------------------------------
+    if (error?.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        success: false,
+        message: "User information already exists",
+      });
+    }
+
+    // --------------------------------
+    // Generic error
+    // --------------------------------
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
-}
-;
+};
 
 //------------------ LOGIN --------------
 exports.login = async (req, res) => {

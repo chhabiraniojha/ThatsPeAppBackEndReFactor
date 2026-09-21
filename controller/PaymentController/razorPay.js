@@ -7,7 +7,6 @@ const requestIp = require('request-ip');
 const UIDGenerator = require('../../util/uidGenerator');
 const operatorModel = require('../../models/OperatorDataModel/operatorData');
 const circleModel = require("../../models/CircleDataModel/circleData")
-const walletOrderModel = require('../../models/OrderModel/walletOrder');
 const walletModel = require('../../models/WalletModels/WalletSchema/wallet');
 const PaymentGatewayModel = require('../../models/PayentGatway/paymentGatway')
 const walletController = require('../../controller/WalletController/wallet');

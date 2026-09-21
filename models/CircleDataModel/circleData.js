@@ -1,41 +1,47 @@
-const { DataTypes } = require('sequelize')
-const sequelize = require('../../util/db_connect')
+const { DataTypes } = require("sequelize");
+const sequelize = require("../../util/db_connect");
 
-const CircleData = sequelize.define('CircleData',
-    {
-        id: {
-            type: DataTypes.INTEGER,
-            primaryKey: true,
-            autoIncrement: true,
-        },
-        name: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        ezytm_circle_code: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        cyrus_circle_code: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        a1_circle_code: {
-            type: DataTypes.INTEGER,
-            allowNull: true
-        },
-        robotic_exchange_circle_code: {
-            type: DataTypes.INTEGER,
-            allowNull: true
-        },
-        mobikwik_circle_code: {
-            type: DataTypes.INTEGER,
-            allowNull: true
-        }
-    }
-)
+const CircleData = sequelize.define(
+  "CircleData",
+  {
+    id: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      primaryKey: true,
+    },
 
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+    },
 
-module.exports = CircleData
+    status: {
+      type: DataTypes.ENUM("active", "inactive"),
+      allowNull: false,
+      defaultValue: "active",
+    },
 
+    createdBy: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
 
+    updatedBy: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+  },
+  {
+    tableName: "Circles",
+    timestamps: true,
+
+    indexes: [
+      {
+        fields: ["status"],
+      },
+    ],
+  }
+);
+
+module.exports = CircleData;

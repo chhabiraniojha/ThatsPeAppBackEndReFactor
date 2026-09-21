@@ -2,12 +2,10 @@
 const axios = require('axios');
 const sequelize = require('../../util/db_connect')
 const User = require("../../models/UserModels/UserSchema/user")
-const PaymentTransaction = require("../../models/PaymentTransactionModel/paymentTransaction")
 const UIDGenerator = require("../../util/uidGenerator")
 const { getSocketInstance } = require("../../util/socket")
 const operatorModel = require('../../models/OperatorDataModel/operatorData')
 const requestIp = require('request-ip');
-const paymentInitiateLogModel = require('../../models/logModel/paymentInitiateLog')
 const walletController = require('../../controller/WalletController/wallet')
 const PayentGatwayModel=require('../../models/PayentGatway/paymentGatway')
 

@@ -12,7 +12,6 @@ const { Op } = require('sequelize');
 const userModel = require('../../models/UserModels/UserSchema/user');
 let { sendEmail } = require('../../util/nodeMailerConfig');
 const { default: axios } = require('axios');
-const Logger = require('../../util/logData');
 
 // -----------Create A New Ticket----------------
 exports.createTicket = async (req, res) => {

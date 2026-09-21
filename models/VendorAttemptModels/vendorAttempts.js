@@ -1,41 +1,43 @@
 const { DataTypes } = require("sequelize");
+
 const sequelize = require("../../util/db_connect");
 
-const RechargeTransaction = require("../RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions");
-const AvailableAPIs = require("../APIModels/api");
+const Order = require("../OrderModel/order");
+const Vendor = require("../APIModels/api");
 
 const RechargeVendorAttempt = sequelize.define(
   "RechargeVendorAttempt",
   {
     id: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(50),
+      allowNull: false,
       primaryKey: true,
     },
 
-    rechargeTransactionId: {
-      type: DataTypes.STRING,
+    orderId: {
+      type: DataTypes.STRING(50),
       allowNull: false,
       references: {
-        model: RechargeTransaction,
+        model: Order,
         key: "id",
       },
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     },
 
-    apiId: {
-      type: DataTypes.STRING,
+    vendorId: {
+      type: DataTypes.STRING(50),
       allowNull: false,
       references: {
-        model: AvailableAPIs,
+        model: Vendor,
         key: "id",
       },
-      onDelete: "CASCADE",
+      onDelete: "RESTRICT",
       onUpdate: "CASCADE",
     },
 
     vendorTransactionId: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       allowNull: true,
     },
 
@@ -71,40 +73,57 @@ const RechargeVendorAttempt = sequelize.define(
     },
   },
   {
+    tableName: "RechargeVendorAttempts",
+    timestamps: true,
+
     indexes: [
       {
-        unique: true,
-        fields: ["rechargeTransactionId", "apiId"],
+        fields: ["orderId"],
+        name: "idx_recharge_vendor_attempt_order_id",
       },
       {
-        fields: ["rechargeTransactionId"],
-      },
-      {
-        fields: ["apiId"],
+        fields: ["vendorId"],
+        name: "idx_recharge_vendor_attempt_vendor_id",
       },
       {
         fields: ["status"],
+        name: "idx_recharge_vendor_attempt_status",
+      },
+      {
+        fields: ["vendorTransactionId"],
+        name: "idx_recharge_vendor_attempt_vendor_transaction_id",
+      },
+      {
+        unique: true,
+        fields: ["orderId", "vendorId"],
+        name: "uq_recharge_vendor_attempt_order_vendor",
       },
     ],
   }
 );
 
-RechargeTransaction.hasMany(RechargeVendorAttempt, {
-  foreignKey: "rechargeTransactionId",
+/* Order */
+
+Order.hasMany(RechargeVendorAttempt, {
+  foreignKey: "orderId",
   as: "vendorAttempts",
 });
 
-RechargeVendorAttempt.belongsTo(RechargeTransaction, {
-  foreignKey: "rechargeTransactionId",
+RechargeVendorAttempt.belongsTo(Order, {
+  foreignKey: "orderId",
+  as: "order",
 });
 
-AvailableAPIs.hasMany(RechargeVendorAttempt, {
-  foreignKey: "apiId",
-  as: "vendorAttempts",
+/* Vendor */
+
+Vendor.hasMany(RechargeVendorAttempt, {
+  foreignKey: "vendorId",
+  as: "rechargeAttempts",
 });
 
-RechargeVendorAttempt.belongsTo(AvailableAPIs, {
-  foreignKey: "apiId",
+RechargeVendorAttempt.belongsTo(Vendor, {
+  foreignKey: "vendorId",
+  as: "vendor",
 });
 
 module.exports = RechargeVendorAttempt;

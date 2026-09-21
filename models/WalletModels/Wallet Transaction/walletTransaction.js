@@ -1,96 +1,140 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../../../util/db_connect');
-const Wallet = require('../WalletSchema/wallet');
-const subCategoryModel = require('../../SubCategoryModel/subCategory');
-const PaymentTransactionModel = require('../../PaymentTransactionModel/paymentTransaction');
-const PaymentModel = require('../../PaymentModel/payment');
-const refundTransactionModel = require('../../RefundTransactionModel/refundTransaction');
-const RechargeTransactionModel = require('../../RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions');
+const { DataTypes } = require("sequelize");
 
-const WalletTransaction = sequelize.define('WalletTransaction', {
-  id: {
-    type: DataTypes.STRING,
-    primaryKey: true
-  },
-  walletId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    references: {
-      model: Wallet,
-      key: 'id'
+const sequelize = require("../../../util/db_connect");
+
+const Wallet = require("../WalletSchema/wallet");
+const Order = require("../../OrderModel/order");
+
+const WalletTransaction = sequelize.define(
+  "WalletTransaction",
+  {
+    id: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      primaryKey: true,
     },
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
-  },
-  amount: {
-    type: DataTypes.FLOAT,
-    allowNull: false
-  },
-  startingBalance: {
-    type: DataTypes.FLOAT,
-    allowNull: false
-  },
-  endingBalance: {
-    type: DataTypes.FLOAT,
-    allowNull: true,
-    defaultValue: null
-  },
-  transactionType: {
-    type: DataTypes.ENUM('Add Funds', 'Recharge', 'Refund','Redeem'),
-    allowNull: false
-  },
-  balanceType: {
-    type: DataTypes.ENUM('Credit', 'Debit'),
-    allowNull: false
-  },
-  transactionId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    references: {
-      model: RechargeTransactionModel,
-      key: 'id'
+
+    walletId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: {
+        model: Wallet,
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     },
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE'
-  },
-  rechargeTypeId: {
-    type: DataTypes.STRING,
-    allowNull: true, // Make it optional for non-recharge transactions
-    references: {
-      model: subCategoryModel,
-      key: 'id'
+
+    amount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
     },
-    omdelete: 'SET NULL',
-    onUpdate: 'CASCADE'
-  },
-  paymentTransactionId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    unique: 'unique_WalletTransaction_paymentTransactionId',
-    references: {
-      model: PaymentModel,
-      key: 'id'
+
+    startingBalance: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
     },
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE'
+
+    endingBalance: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
+    },
+
+    transactionType: {
+      type: DataTypes.ENUM(
+        "REWARD",
+        "RECHARGE",
+        "REFUND",
+        "WITHDRAW"
+      ),
+      allowNull: false,
+    },
+
+    balanceType: {
+      type: DataTypes.ENUM("CREDIT", "DEBIT"),
+      allowNull: false,
+    },
+
+    orderId: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      references: {
+        model: Order,
+        key: "id",
+      },
+      onDelete: "SET NULL",
+      onUpdate: "CASCADE",
+    },
+
+    status: {
+      type: DataTypes.ENUM(
+        "PENDING",
+        "SUCCESS",
+        "FAILED"
+      ),
+      allowNull: false,
+      defaultValue: "PENDING",
+    },
+
+    failureReason: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      defaultValue: null,
+    },
   },
-  status: {
-    type: DataTypes.ENUM('pending', 'success', 'failed'),
-    allowNull: false,
-    defaultValue: 'pending'
-  },
-  isUsed: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  failureReason: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: null
+  {
+    tableName: "WalletTransactions",
+    timestamps: true,
+
+    indexes: [
+      {
+        fields: ["walletId"],
+        name: "idx_wallet_transaction_wallet_id",
+      },
+      {
+        fields: ["orderId"],
+        name: "idx_wallet_transaction_order_id",
+      },
+      {
+        fields: ["transactionType"],
+        name: "idx_wallet_transaction_type",
+      },
+      {
+        fields: ["balanceType"],
+        name: "idx_wallet_transaction_balance_type",
+      },
+      {
+        fields: ["status"],
+        name: "idx_wallet_transaction_status",
+      },
+      {
+        fields: ["createdAt"],
+        name: "idx_wallet_transaction_created_at",
+      },
+    ],
   }
+);
+
+/* Associations */
+
+Wallet.hasMany(WalletTransaction, {
+  foreignKey: "walletId",
+  as: "transactions",
 });
 
+WalletTransaction.belongsTo(Wallet, {
+  foreignKey: "walletId",
+  as: "wallet",
+});
 
+Order.hasMany(WalletTransaction, {
+  foreignKey: "orderId",
+  as: "walletTransactions",
+});
+
+WalletTransaction.belongsTo(Order, {
+  foreignKey: "orderId",
+  as: "order",
+});
 
 module.exports = WalletTransaction;

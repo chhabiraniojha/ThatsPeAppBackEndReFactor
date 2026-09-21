@@ -5,7 +5,6 @@ const { Op } = require('sequelize');
 const walletTransactionModel = require('../../models/WalletModels/Wallet Transaction/walletTransaction');
 const walletModel = require('../../models/WalletModels/WalletSchema/wallet');
 const operatorModel = require('../../models/OperatorDataModel/operatorData');
-const paymentTransactionModel = require('../../models/PaymentTransactionModel/paymentTransaction');
 const userModel = require('../../models/UserModels/UserSchema/user');
 const availableAPIIdModel = require('../../models/APIModels/api');
 const subCategoryModel = require('../../models/SubCategoryModel/subCategory');

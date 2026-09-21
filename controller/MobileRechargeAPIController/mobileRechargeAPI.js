@@ -7,7 +7,6 @@ const axios = require('axios')
 const { Transaction } = require('sequelize')
 const uidgenerate = require('../../util/uidGenerator')
 const { getRedisClient } = require('../../util/redisClient');
-const { log } = require('../../util/logData')
 const OperatorData = require('../../models/OperatorDataModel/operatorData')
 
 const CACHE_TTL = 43200; // 5 minutes

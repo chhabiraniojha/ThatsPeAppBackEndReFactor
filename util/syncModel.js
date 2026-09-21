@@ -1,17 +1,13 @@
-const { IoTSecureTunneling } = require('aws-sdk');
-const sequelize = require('./db_connect')
-// Disable or customize logging when initializing sequelize
-// sequelize.options.logging = true; // Disable all logging
+const sequelize = require('./db_connect');
 
-const syncModels = async() => {
+const syncModels = async () => {
     try {
-        await sequelize.sync({ })
+        await sequelize.sync({});
         console.log('All models were synchronized successfully.');
- 
     } catch (error) {
-        console.log('Some error occurred', error);
+        console.error('Database synchronization failed:', error);
+        throw error;
     }
-}
+};
 
-
-module.exports = syncModels
+module.exports = syncModels;
