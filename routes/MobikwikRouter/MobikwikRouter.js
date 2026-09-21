@@ -8,6 +8,15 @@ const {
 const {
     viewBill,
 } = require("../../controller/MobikwikController/mobikwikViewBillController");
+const {
+    testMobiKwikPayment,
+} = require("../../controller/MobikwikController/mobikwikPaymentTestController");
+
+
+router.post(
+    "/test/mobikwik/payment",
+    testMobiKwikPayment
+);
 
 
 
