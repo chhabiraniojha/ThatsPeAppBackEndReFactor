@@ -2,6 +2,10 @@ const {
     getMobiKwikOperatorConfig,
 } = require("./mobiKwikConfigResolver");
 
+const {
+    resolveStaticParams,
+} = require("./mobikwikStaticValueResolver");
+
 const encryptPayload = require("../mobikwikServices/mobikwikEncryption");
 
 const getFieldValue = (field) => {
@@ -38,6 +42,16 @@ const buildMobiKwikViewBillPayload = async ({
         operatorId,
     });
 
+    /*
+     * Resolve static/predefined values from
+     * MobiKwik operator configuration.
+     *
+     * Example:
+     * FASTag  -> bankName = "16"
+     * CCBP    -> bankCode = "IDFCB"
+     */
+    const staticParams = resolveStaticParams(config);
+
     const cnField = fields.find(
         (field) => field?.fieldKey === "cn"
     );
@@ -60,16 +74,37 @@ const buildMobiKwikViewBillPayload = async ({
         throw error;
     }
 
-    const adParams = {};
+    /*
+     * Frontend supplied parameters.
+     *
+     * cn is handled separately.
+     */
+    const frontendParams = {};
 
     fields.forEach((field) => {
         if (
             field?.fieldKey &&
             field.fieldKey !== "cn"
         ) {
-            adParams[field.fieldKey] = getFieldValue(field);
+            frontendParams[field.fieldKey] = getFieldValue(field);
         }
     });
+
+    /*
+     * Static parameters are merged LAST.
+     *
+     * This is intentional.
+     *
+     * If frontend accidentally sends:
+     * bankName = "something"
+     *
+     * engine configuration will override it with
+     * the actual configured static value.
+     */
+    const adParams = {
+        ...frontendParams,
+        ...staticParams,
+    };
 
     const payload = {
         cn,
