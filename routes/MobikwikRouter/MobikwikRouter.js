@@ -14,7 +14,7 @@ const {
 
 
 router.post(
-    "/test/mobikwik/payment",
+    "/test/payment",
     testMobiKwikPayment
 );
 
