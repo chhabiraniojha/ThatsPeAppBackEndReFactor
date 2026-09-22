@@ -19,6 +19,7 @@ exports.testMobiKwikPayment = async (req, res) => {
         const {
             operatorId,
             fields,
+            cirId,
             billAmount,
             billnetamount,
             customerMobile,
