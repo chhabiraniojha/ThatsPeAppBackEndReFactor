@@ -57,7 +57,6 @@ exports.testMobiKwikPayment = async (req, res) => {
 
         const mobikwikResponse =
             await callMobiKwikPayment({
-                token,
                 encryptedPayload,
             });
 
