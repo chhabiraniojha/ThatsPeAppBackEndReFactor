@@ -37,22 +37,15 @@ exports.testMobiKwikPayment = async (req, res) => {
             await buildMobiKwikPaymentPayload({
                 operatorId,
                 fields,
+                cirId,
                 billAmount,
                 billnetamount,
                 customerMobile,
                 paymentRefID,
                 reqid,
+
             });
 
-
-        /*
-         * --------------------------------
-         * 2. Get existing MobiKwik token
-         * --------------------------------
-         */
-
-        const token =
-            await mobikwikTokenGenerate();
 
 
         /*

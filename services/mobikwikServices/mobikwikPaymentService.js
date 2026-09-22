@@ -1,23 +1,15 @@
 const axios = require("axios");
+const mobikwikTokenGenerate = require("../../util/mobikwikTokenGenerator");
 
 const MOBIKWIK_PAYMENT_URL =
     "https://rapi-b2b.mobikwik.com/recharge/v3/retailerPayment";
 
 
 const callMobiKwikPayment = async ({
-    token,
     encryptedPayload,
 }) => {
 
-    if (!token) {
-        const error = new Error(
-            "MobiKwik token is required"
-        );
-
-        error.code = "MOBIKWIK_TOKEN_REQUIRED";
-
-        throw error;
-    }
+    const token=await mobikwikTokenGenerate();
 
 
     if (!encryptedPayload) {

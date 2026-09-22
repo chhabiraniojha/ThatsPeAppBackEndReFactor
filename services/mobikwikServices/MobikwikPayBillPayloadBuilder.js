@@ -37,9 +37,28 @@ const isEmpty = (value) => {
 };
 
 
+/*
+ * Check whether cirId contains a usable MobiKwik
+ * circle value.
+ *
+ * "As per State" is not an actual circle ID.
+ */
+const isValidCirId = (value) => {
+    if (isEmpty(value)) {
+        return false;
+    }
+
+    return (
+        String(value).trim().toLowerCase() !==
+        "as per state"
+    );
+};
+
+
 const buildMobiKwikPaymentPayload = async ({
     operatorId,
     fields,
+    cirId,
     billAmount,
     billnetamount,
     customerMobile,
@@ -182,14 +201,42 @@ const buildMobiKwikPaymentPayload = async ({
     }
 
 
-    // Keep customer identifier as string
-    // to preserve leading zeroes.
+    /*
+     * Keep customer identifier as string
+     * to preserve leading zeroes.
+     */
 
     const cn = String(cnValue);
 
 
     // --------------------------------
-    // 5. Resolve payment parameters
+    // 5. Resolve circle ID
+    // --------------------------------
+    //
+    // Priority:
+    //
+    // 1. cirId received by function
+    // 2. config.cirId
+    //
+    // But "As per State" is NOT treated
+    // as an actual circle ID.
+    //
+
+    let finalCirId = "";
+
+    if (isValidCirId(cirId)) {
+
+        finalCirId = String(cirId);
+
+    } else if (isValidCirId(config.cirId)) {
+
+        finalCirId = String(config.cirId);
+
+    }
+
+
+    // --------------------------------
+    // 6. Resolve payment parameters
     // --------------------------------
 
     const paymentParams =
@@ -201,26 +248,37 @@ const buildMobiKwikPaymentPayload = async ({
 
 
     // --------------------------------
-    // 6. Build final payment payload
+    // 7. Build final payment payload
     // --------------------------------
 
     const payload = {
+
         cn,
 
         op: String(config.op),
 
-        cir: isEmpty(config.cirId)
-            ? ""
-            : String(config.cirId),
+        cir: finalCirId,
 
-        // Final payable amount:
-        // currently billAmount
+        /*
+         * Final payable amount.
+         *
+         * Currently billAmount is used
+         * for MobiKwik payment.
+         *
+         * billnetamount is received and
+         * retained for future/reference.
+         */
+
         amt: String(billAmount),
 
         reqid: String(reqid),
 
         customerMobile:
             String(customerMobile),
+
+        /*
+         * Backend controlled values.
+         */
 
         remitterName: "ThatsPe",
 
@@ -232,13 +290,16 @@ const buildMobiKwikPaymentPayload = async ({
         paymentAccountInfo:
             "7008698408@ybl",
 
-        // Dynamic payment parameters
+        /*
+         * Dynamic payment parameters.
+         */
+
         ...paymentParams,
     };
 
 
     // --------------------------------
-    // 7. Encrypt final payload
+    // 8. Encrypt final payload
     // --------------------------------
 
     return encryptPayload(payload);
