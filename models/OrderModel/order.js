@@ -37,16 +37,6 @@ const Order = sequelize.define(
       onUpdate: "CASCADE",
     },
 
-    serviceRef: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-    },
-
-    operatorType: {
-      type: DataTypes.STRING(50),
-      allowNull: false,
-    },
-
     operatorId: {
       type: DataTypes.STRING(50),
       allowNull: false,
@@ -69,33 +59,115 @@ const Order = sequelize.define(
       onUpdate: "CASCADE",
     },
 
+    /*
+     * Complete snapshot of the fields used
+     * during Order creation.
+     */
+    fields: {
+      type: DataTypes.JSON,
+      allowNull: false,
+    },
+
+    /*
+     * Original bill/recharge amount.
+     */
     amount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
 
-    discountedAmount: {
+    /*
+     * Actual operator discount amount applied
+     * to this order.
+     */
+    operatorDiscount: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: true,
+      allowNull: false,
+      defaultValue: 0.00,
     },
 
-    paymentMethod: {
-      type: DataTypes.ENUM("UPI", "WALLET", "COMBO"),
+    /*
+     * Actual referral discount amount applied
+     * to this order.
+     *
+     * Stored as a snapshot so future referral
+     * configuration changes do not affect
+     * existing orders.
+     */
+    referralDiscount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+
+    /*
+     * Amount after all discounts.
+     *
+     * amount
+     * - operatorDiscount
+     * - referralDiscount
+     */
+    discountedAmount: {
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
 
+    /*
+     * Convenience fee applied to this order.
+     *
+     * Stored as a snapshot so future convenience
+     * fee configuration changes do not affect
+     * existing orders.
+     */
+    convenienceFee: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+
+    /*
+     * Final amount user actually needs to pay.
+     *
+     * discountedAmount + convenienceFee
+     */
+    finalPayableAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+
+    /*
+     * Selected payment method.
+     */
+    paymentMethod: {
+      type: DataTypes.ENUM(
+        "UPI",
+        "WALLET",
+        "COMBO"
+      ),
+      allowNull: false,
+    },
+
+    /*
+     * Amount paid/debited from wallet.
+     */
     walletAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0.00,
     },
 
+    /*
+     * Amount paid through online payment gateway.
+     */
     onlinePaidAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0.00,
     },
 
+    /*
+     * Overall order status.
+     */
     status: {
       type: DataTypes.ENUM(
         "CREATED",
@@ -145,9 +217,9 @@ const Order = sequelize.define(
   }
 );
 
-/* Associations */
 
-// User → Orders
+/* User → Orders */
+
 User.hasMany(Order, {
   foreignKey: "userId",
   as: "orders",
@@ -158,7 +230,9 @@ Order.belongsTo(User, {
   as: "user",
 });
 
-// SubCategory → Orders
+
+/* SubCategory → Orders */
+
 SubCategory.hasMany(Order, {
   foreignKey: "serviceType",
   as: "orders",
@@ -169,7 +243,9 @@ Order.belongsTo(SubCategory, {
   as: "service",
 });
 
-// OperatorData → Orders
+
+/* OperatorData → Orders */
+
 OperatorData.hasMany(Order, {
   foreignKey: "operatorId",
   as: "orders",
@@ -180,7 +256,9 @@ Order.belongsTo(OperatorData, {
   as: "operator",
 });
 
-// CircleData → Orders
+
+/* CircleData → Orders */
+
 CircleData.hasMany(Order, {
   foreignKey: "circleId",
   as: "orders",
@@ -190,5 +268,6 @@ Order.belongsTo(CircleData, {
   foreignKey: "circleId",
   as: "circle",
 });
+
 
 module.exports = Order;

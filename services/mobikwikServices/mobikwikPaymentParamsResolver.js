@@ -27,17 +27,21 @@ const resolvePaymentParams = ({
 }) => {
     if (!config) {
         const error = new Error(
-            "MobiKwik config is required"
+            "MobiKwik config is required-from resolvePaymentParams"
         );
+
         error.code = "MOBIKWIK_CONFIG_REQUIRED";
+
         throw error;
     }
 
     if (!Array.isArray(fields)) {
         const error = new Error(
-            "fields must be an array"
+            "MobiKwik fields must be an array-from resolvePaymentParams"
         );
-        error.code = "INVALID_FIELDS";
+
+        error.code = "MOBIKWIK_INVALID_FIELDS";
+
         throw error;
     }
 
@@ -59,11 +63,7 @@ const resolvePaymentParams = ({
         }
 
         /*
-         * Find the corresponding View Bill field.
-         *
-         * Example:
-         * billFetchId = emailId
-         * paymentId   = ad1
+         * Find corresponding View Bill field.
          */
         const field = fields.find(
             (item) =>
@@ -89,11 +89,7 @@ const resolvePaymentParams = ({
 
         /*
          * If there is no frontend field,
-         * check whether this parameter was
-         * resolved as a static value.
-         *
-         * Example:
-         * bankCode -> ICIC
+         * check static values.
          */
         if (
             !isEmpty(billFetchId) &&

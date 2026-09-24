@@ -5,151 +5,184 @@ const MobiKwikOperator = require("../../models/MobikwikModel/MobikwikOperator");
 const MobiKwikCCBPBankList = require("../../models/MobikwikModel/MobikwikCCBPBankLIst");
 
 const getMobiKwikOperatorConfig = async ({ operatorId }) => {
-  /*
-  |--------------------------------------------------------------------------
-  | 1. Validate operatorId
-  |--------------------------------------------------------------------------
-  */
+    /*
+    |--------------------------------------------------------------------------
+    | 1. Validate operatorId
+    |--------------------------------------------------------------------------
+    */
 
-  if (!operatorId) {
-    const error = new Error("operatorId is required");
+    if (!operatorId) {
+        const error = new Error(
+            "MobiKwik operatorId is required-from getMobiKwikOperatorConfig"
+        );
 
-    error.code = "MISSING_OPERATOR_ID";
+        error.code = "MISSING_OPERATOR_ID";
 
-    throw error;
-  }
+        throw error;
+    }
 
-  /*
-  |--------------------------------------------------------------------------
-  | 2. Find OperatorData
-  |--------------------------------------------------------------------------
-  */
+    try {
+        /*
+        |--------------------------------------------------------------------------
+        | 2. Find OperatorData
+        |--------------------------------------------------------------------------
+        */
 
-  const operator = await OperatorData.findByPk(operatorId);
+        const operator = await OperatorData.findByPk(operatorId);
 
-  if (!operator) {
-    const error = new Error("Operator not found");
+        if (!operator) {
+            const error = new Error(
+                "MobiKwik operator not found-from getMobiKwikOperatorConfig"
+            );
 
-    error.code = "OPERATOR_NOT_FOUND";
+            error.code = "OPERATOR_NOT_FOUND";
 
-    throw error;
-  }
+            throw error;
+        }
 
-  /*
-  |--------------------------------------------------------------------------
-  | 3. Get SubCategory from OperatorData
-  |--------------------------------------------------------------------------
-  */
+        /*
+        |--------------------------------------------------------------------------
+        | 3. Get SubCategory from OperatorData
+        |--------------------------------------------------------------------------
+        */
 
-  const subCategoryId = operator.subCategoryId;
+        const subCategoryId = operator.subCategoryId;
 
-  if (!subCategoryId) {
-    const error = new Error(
-      "SubCategory is not configured for this operator"
-    );
+        if (!subCategoryId) {
+            const error = new Error(
+                "MobiKwik SubCategory is not configured for this operator-from getMobiKwikOperatorConfig"
+            );
 
-    error.code = "OPERATOR_SUBCATEGORY_NOT_CONFIGURED";
+            error.code = "OPERATOR_SUBCATEGORY_NOT_CONFIGURED";
 
-    throw error;
-  }
+            throw error;
+        }
 
-  /*
-  |--------------------------------------------------------------------------
-  | 4. Find SubCategory
-  |--------------------------------------------------------------------------
-  */
+        /*
+        |--------------------------------------------------------------------------
+        | 4. Find SubCategory
+        |--------------------------------------------------------------------------
+        */
 
-  const subCategory = await SubCategory.findByPk(
-    subCategoryId
-  );
+        const subCategory = await SubCategory.findByPk(
+            subCategoryId
+        );
 
-  if (!subCategory) {
-    const error = new Error("SubCategory not found");
+        if (!subCategory) {
+            const error = new Error(
+                "MobiKwik SubCategory not found-from getMobiKwikOperatorConfig"
+            );
 
-    error.code = "SUBCATEGORY_NOT_FOUND";
+            error.code = "SUBCATEGORY_NOT_FOUND";
 
-    throw error;
-  }
+            throw error;
+        }
 
-  /*
-  |--------------------------------------------------------------------------
-  | 5. Decide MobiKwik Source Table
-  |--------------------------------------------------------------------------
-  */
+        /*
+        |--------------------------------------------------------------------------
+        | 5. Decide MobiKwik Source Table
+        |--------------------------------------------------------------------------
+        */
 
-  const subCategoryName = String(
-    subCategory.subCategoryName ||
-      subCategory.name ||
-      ""
-  )
-    .trim()
-    .toLowerCase();
+        const subCategoryName = String(
+            subCategory.subCategoryName ||
+            subCategory.name ||
+            ""
+        )
+            .trim()
+            .toLowerCase();
 
-  let sourceType;
-  let config;
+        let sourceType;
+        let config;
 
-  /*
-  |--------------------------------------------------------------------------
-  | Credit Card
-  |--------------------------------------------------------------------------
-  */
+        /*
+        |--------------------------------------------------------------------------
+        | Credit Card
+        |--------------------------------------------------------------------------
+        */
 
-  if (subCategoryName === "credit card") {
-    sourceType = "CCBP";
+        if (subCategoryName === "credit card") {
+            sourceType = "CCBP";
 
-    config = await MobiKwikCCBPBankList.findOne({
-      where: {
-        operatorId,
-      },
-    });
-  }
+            config = await MobiKwikCCBPBankList.findOne({
+                where: {
+                    operatorId,
+                },
+            });
+        }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Other Services
-  |--------------------------------------------------------------------------
-  */
+        /*
+        |--------------------------------------------------------------------------
+        | Other Services
+        |--------------------------------------------------------------------------
+        */
 
-  else {
-    sourceType = "OPERATOR";
+        else {
+            sourceType = "OPERATOR";
 
-    config = await MobiKwikOperator.findOne({
-      where: {
-        operatorId,
-      },
-    });
-  }
+            config = await MobiKwikOperator.findOne({
+                where: {
+                    operatorId,
+                },
+            });
+        }
 
-  /*
-  |--------------------------------------------------------------------------
-  | 6. Configuration not found
-  |--------------------------------------------------------------------------
-  */
+        /*
+        |--------------------------------------------------------------------------
+        | 6. Configuration not found
+        |--------------------------------------------------------------------------
+        */
 
-  if (!config) {
-    const error = new Error(
-      "MobiKwik configuration not found for selected operator"
-    );
+        if (!config) {
+            const error = new Error(
+                "MobiKwik configuration not found for selected operator-from getMobiKwikOperatorConfig"
+            );
 
-    error.code = "MOBIKWIK_CONFIG_NOT_FOUND";
+            error.code = "MOBIKWIK_CONFIG_NOT_FOUND";
 
-    throw error;
-  }
+            throw error;
+        }
 
-  /*
-  |--------------------------------------------------------------------------
-  | 7. Return
-  |--------------------------------------------------------------------------
-  */
+        /*
+        |--------------------------------------------------------------------------
+        | 7. Return
+        |--------------------------------------------------------------------------
+        */
 
-  return {
-    operator,
-    subCategory,
-    sourceType,
-    config,
-  };
+        return {
+            operator,
+            subCategory,
+            sourceType,
+            config,
+        };
+
+    } catch (error) {
+
+        /*
+         * Preserve our own structured errors.
+         */
+        if (error.code) {
+            throw error;
+        }
+
+        /*
+         * Unexpected database / Sequelize error.
+         */
+        const structuredError = new Error(
+            "MobiKwik operator configuration lookup failed-from getMobiKwikOperatorConfig"
+        );
+
+        structuredError.code =
+            "MOBIKWIK_OPERATOR_CONFIG_LOOKUP_FAILED";
+
+        structuredError.rawResponse = {
+            originalError: error.message,
+        };
+
+        throw structuredError;
+    }
 };
 
 module.exports = {
-  getMobiKwikOperatorConfig,
+    getMobiKwikOperatorConfig,
 };

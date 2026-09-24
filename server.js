@@ -34,7 +34,8 @@ const MobiKwikHPCLDistributorList=require("./models/MobikwikModel/MobiKwikHPCLDi
 const MobiKwikShriramGeneralInsuranceQuotePay=require("./models/MobikwikModel/MobiKwikShriramGeneralInsuranceQuotePay");
 const MobiKwikMadhyaPradeshUrban=require("./models/MobikwikModel/MobiKwikMadhyaPradeshUrban");
 const MobiKwikOdishaMunicipalPayments=require("./models/MobikwikModel/MobiKwikOdishaMunicipalPayments");
-const MobiKwikJharkhandSubdivisionCodeList=require("./models/MobikwikModel/MobiKwikJharkhandSubdivisionCodeList")
+const MobiKwikJharkhandSubdivisionCodeList=require("./models/MobikwikModel/MobiKwikJharkhandSubdivisionCodeList");
+const ConvenienceFee=require("./models/ConvenienceFeeModel/ConvenienceFee")
 // Models extraction ends here
 
 const bodyParser = require('body-parser');
@@ -71,6 +72,7 @@ const addTowallet = require('./routes/AddtoWalletRoutes/addToWallet');
 const razorpayRoute = require('./routes/PaymentRoutes/razorpay');
 const zaakpayRoute = require('./routes/PaymentRoutes/zaakpay');
 const { initializeSocket } = require('./util/socket');
+const orderRoute=require('./routes/OrderRoute/order')
 
 
 // -----------------------------------------
@@ -124,6 +126,7 @@ const startServer = async () => {
   app.use('/user/', notification);
   app.use("/user/", otpRoute);
   app.use('/mobikwik', mobikwikRoute);
+  app.use('/user/order', orderRoute);
 
   app.use('/app', appUsageRoutes);
   app.use('/callback', callbackRoute);

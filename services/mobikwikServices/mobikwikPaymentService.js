@@ -1,5 +1,7 @@
 const axios = require("axios");
-const mobikwikTokenGenerate = require("../../util/mobikwikTokenGenerator");
+
+const mobikwikTokenGenerate =
+    require("../../util/mobikwikTokenGenerator");
 
 const MOBIKWIK_PAYMENT_URL =
     "https://rapi-b2b.mobikwik.com/recharge/v3/retailerPayment";
@@ -9,18 +11,20 @@ const callMobiKwikPayment = async ({
     encryptedPayload,
 }) => {
 
-    const token=await mobikwikTokenGenerate();
-
-
     if (!encryptedPayload) {
         const error = new Error(
-            "encryptedPayload is required"
+            "MobiKwik encryptedPayload is required-from callMobiKwikPayment"
         );
 
-        error.code = "MOBIKWIK_ENCRYPTED_PAYLOAD_REQUIRED";
+        error.code =
+            "MOBIKWIK_ENCRYPTED_PAYLOAD_REQUIRED";
 
         throw error;
     }
+
+
+    const token =
+        await mobikwikTokenGenerate();
 
 
     try {
@@ -41,30 +45,62 @@ const callMobiKwikPayment = async ({
         );
 
 
+        /*
+         * MobiKwik HTTP request succeeded.
+         *
+         * The actual business status is inside
+         * response.data.success.
+         */
+
+        if (!response.data?.success) {
+
+            const error = new Error(
+                "MobiKwik recharge request failed-from callMobiKwikPayment"
+            );
+
+            error.code =
+                "MOBIKWIK_RECHARGE_REQUEST_FAILED";
+
+            error.rawResponse =
+                response.data;
+
+            throw error;
+        }
+
+
         return response.data;
 
     } catch (error) {
 
         /*
-         * Keep the original MobiKwik response
-         * available for the caller.
+         * Preserve our own structured error.
          */
-
-        if (error.response) {
-
-            return {
-                success: false,
-
-                httpStatus:
-                    error.response.status,
-
-                data:
-                    error.response.data,
-            };
+        if (
+            error.code ===
+            "MOBIKWIK_RECHARGE_REQUEST_FAILED"
+        ) {
+            throw error;
         }
 
 
-        throw error;
+        /*
+         * Axios received an HTTP error response.
+         *
+         * Store only response.data.
+         * Do NOT store the complete Axios response.
+         */
+
+        const structuredError = new Error(
+            "MobiKwik recharge request failed-from callMobiKwikPayment"
+        );
+
+        structuredError.code =
+            "MOBIKWIK_RECHARGE_REQUEST_FAILED";
+
+        structuredError.rawResponse =
+            error.response?.data || null;
+
+        throw structuredError;
     }
 };
 

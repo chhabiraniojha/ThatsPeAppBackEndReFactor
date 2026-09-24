@@ -37,12 +37,6 @@ const isEmpty = (value) => {
 };
 
 
-/*
- * Check whether cirId contains a usable MobiKwik
- * circle value.
- *
- * "As per State" is not an actual circle ID.
- */
 const isValidCirId = (value) => {
     if (isEmpty(value)) {
         return false;
@@ -72,7 +66,7 @@ const buildMobiKwikPaymentPayload = async ({
 
     if (isEmpty(operatorId)) {
         const error = new Error(
-            "operatorId is required"
+            "MobiKwik operatorId is required-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "MISSING_OPERATOR_ID";
@@ -80,10 +74,9 @@ const buildMobiKwikPaymentPayload = async ({
         throw error;
     }
 
-
     if (!Array.isArray(fields)) {
         const error = new Error(
-            "fields must be an array"
+            "MobiKwik fields must be an array-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "INVALID_FIELDS";
@@ -91,10 +84,9 @@ const buildMobiKwikPaymentPayload = async ({
         throw error;
     }
 
-
     if (isEmpty(billAmount)) {
         const error = new Error(
-            "billAmount is required"
+            "MobiKwik billAmount is required-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "BILL_AMOUNT_REQUIRED";
@@ -102,10 +94,9 @@ const buildMobiKwikPaymentPayload = async ({
         throw error;
     }
 
-
     if (isEmpty(billnetamount)) {
         const error = new Error(
-            "billnetamount is required"
+            "MobiKwik billnetamount is required-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "BILL_NET_AMOUNT_REQUIRED";
@@ -113,10 +104,9 @@ const buildMobiKwikPaymentPayload = async ({
         throw error;
     }
 
-
     if (isEmpty(customerMobile)) {
         const error = new Error(
-            "customerMobile is required"
+            "MobiKwik customerMobile is required-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "CUSTOMER_MOBILE_REQUIRED";
@@ -124,10 +114,9 @@ const buildMobiKwikPaymentPayload = async ({
         throw error;
     }
 
-
     if (isEmpty(paymentRefID)) {
         const error = new Error(
-            "paymentRefID is required"
+            "MobiKwik paymentRefID is required-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "PAYMENT_REF_ID_REQUIRED";
@@ -135,10 +124,9 @@ const buildMobiKwikPaymentPayload = async ({
         throw error;
     }
 
-
     if (isEmpty(reqid)) {
         const error = new Error(
-            "reqid is required"
+            "MobiKwik reqid is required-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "REQID_REQUIRED";
@@ -177,7 +165,7 @@ const buildMobiKwikPaymentPayload = async ({
 
     if (!cnField) {
         const error = new Error(
-            "cn field is required"
+            "MobiKwik cn field is required-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "CN_FIELD_REQUIRED";
@@ -192,7 +180,7 @@ const buildMobiKwikPaymentPayload = async ({
 
     if (isEmpty(cnValue)) {
         const error = new Error(
-            "cn value is required"
+            "MobiKwik cn value is required-from buildMobiKwikPaymentPayload"
         );
 
         error.code = "CN_VALUE_REQUIRED";
@@ -201,26 +189,12 @@ const buildMobiKwikPaymentPayload = async ({
     }
 
 
-    /*
-     * Keep customer identifier as string
-     * to preserve leading zeroes.
-     */
-
     const cn = String(cnValue);
 
 
     // --------------------------------
     // 5. Resolve circle ID
     // --------------------------------
-    //
-    // Priority:
-    //
-    // 1. cirId received by function
-    // 2. config.cirId
-    //
-    // But "As per State" is NOT treated
-    // as an actual circle ID.
-    //
 
     let finalCirId = "";
 
@@ -259,26 +233,12 @@ const buildMobiKwikPaymentPayload = async ({
 
         cir: finalCirId,
 
-        /*
-         * Final payable amount.
-         *
-         * Currently billAmount is used
-         * for MobiKwik payment.
-         *
-         * billnetamount is received and
-         * retained for future/reference.
-         */
-
         amt: String(billAmount),
 
         reqid: String(reqid),
 
         customerMobile:
             String(customerMobile),
-
-        /*
-         * Backend controlled values.
-         */
 
         remitterName: "ThatsPe",
 
@@ -289,10 +249,6 @@ const buildMobiKwikPaymentPayload = async ({
 
         paymentAccountInfo:
             "7008698408@ybl",
-
-        /*
-         * Dynamic payment parameters.
-         */
 
         ...paymentParams,
     };

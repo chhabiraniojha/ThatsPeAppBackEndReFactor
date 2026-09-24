@@ -37,7 +37,13 @@ const mobikwikTokenGenerate = async () => {
             return retryToken;
         }
 
-        throw new Error("Token generation in progress");
+        const error = new Error(
+            "MobiKwik token generation failed-from generateTokenService"
+        );
+
+        error.code = "MOBIKWIK_TOKEN_GENERATION_FAILED";
+
+        throw error;
     }
 
     try {
@@ -50,14 +56,34 @@ const mobikwikTokenGenerate = async () => {
                 clientSecret: process.env.MOBIKWIK_CLIENT_SECRET
             }
         );
-        console.log(response)
-        if (!response.data.success) {
-            throw new Error(
-                response.data.message?.text || "Token generation failed"
+
+        // MobiKwik returned a business failure
+        if (!response.data?.success) {
+
+            const error = new Error(
+                "MobiKwik token generation failed-from generateTokenService"
             );
+
+            error.code = "MOBIKWIK_TOKEN_GENERATION_FAILED";
+            error.rawResponse = response.data;
+
+            throw error;
         }
 
-        const token = response.data.data.token;
+        const token = response.data?.data?.token;
+
+        // Unexpected successful response without token
+        if (!token) {
+
+            const error = new Error(
+                "MobiKwik token generation failed-from generateTokenService"
+            );
+
+            error.code = "MOBIKWIK_TOKEN_GENERATION_FAILED";
+            error.rawResponse = response.data;
+
+            throw error;
+        }
 
         // Store token for ~24h
         await redisClient.set(
@@ -72,10 +98,21 @@ const mobikwikTokenGenerate = async () => {
 
     } catch (error) {
 
-        throw new Error(
-            error.response?.data?.message?.text ||
-            error.message
+        // Preserve our already structured MobiKwik error
+        if (error.code === "MOBIKWIK_TOKEN_GENERATION_FAILED") {
+            throw error;
+        }
+
+        const structuredError = new Error(
+            "MobiKwik token generation failed-from generateTokenService"
         );
+
+        structuredError.code = "MOBIKWIK_TOKEN_GENERATION_FAILED";
+
+        structuredError.rawResponse =
+            error.response?.data || null;
+
+        throw structuredError;
 
     } finally {
 
@@ -85,4 +122,4 @@ const mobikwikTokenGenerate = async () => {
     }
 };
 
-module.exports = mobikwikTokenGenerate;   
+module.exports = mobikwikTokenGenerate;

@@ -20,8 +20,12 @@ const isEmpty = (value) => {
 
 const resolveStaticParams = (config) => {
     if (!config) {
-        const error = new Error("MobiKwik config is required");
+        const error = new Error(
+            "MobiKwik config is required-from resolveStaticParams"
+        );
+
         error.code = "MOBIKWIK_CONFIG_REQUIRED";
+
         throw error;
     }
 
@@ -38,14 +42,6 @@ const resolveStaticParams = (config) => {
 
         /*
          * FASTag special case
-         *
-         * Example:
-         * Param2_id       = bankName
-         * Param2_Regex    = 16
-         * Param2_Optional = NULL
-         *
-         * Result:
-         * bankName = "16"
          */
         if (
             parameterNo === 2 &&
@@ -58,19 +54,6 @@ const resolveStaticParams = (config) => {
 
         /*
          * CCBP special case
-         *
-         * Example:
-         * Param4_id              = bankCode
-         * Param4_id_for_payments = ad3
-         * Param4_Regex           = IDFCB
-         * Param4_Optional        = False
-         *
-         * Result:
-         * bankCode = "IDFCB"
-         *
-         * IMPORTANT:
-         * View Bill uses Param4_id (bankCode).
-         * Payment flow can separately use Param4_id_for_payments (ad3).
          */
         if (
             parameterNo === 4 &&
