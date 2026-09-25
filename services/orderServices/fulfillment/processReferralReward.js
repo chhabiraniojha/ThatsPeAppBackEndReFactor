@@ -449,7 +449,7 @@ const processReferralReward = async ({
       await WalletTransaction.create(
         {
           id:
-            uidgenerate(),
+            await uidgenerate(),
 
           walletId:
             wallet.id,
