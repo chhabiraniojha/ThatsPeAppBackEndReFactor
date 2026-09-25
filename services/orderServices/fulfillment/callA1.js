@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const  pollA1Status  = require("./pollA1Status");
+const pollA1Status = require("./pollA1Status");
 
 const callA1 = async ({
   order,
@@ -13,7 +13,8 @@ const callA1 = async ({
    * 1. BASIC VALIDATION
    * --------------------------------------------------
    */
-
+  console.log("========== CALL A1 STARTED ==========");
+  console.log("ORDER ID:", order?.id);
   if (!order) {
     const error = new Error("Order is required");
     error.code = "ORDER_REQUIRED";
@@ -47,6 +48,10 @@ const callA1 = async ({
 
     throw error;
   }
+
+  console.log("serviceName:", serviceName);
+  console.log("order.circleId:", order.circleId);
+  console.log("order:", order);
 
   /*
    * --------------------------------------------------
@@ -144,9 +149,9 @@ const callA1 = async ({
 
   const circleCode =
     serviceName === "PREPAID"
-      ? order.circle?.code || order.circle?.circleCode || null
+      ? order.circleId || null
       : null;
-
+  console.log("circleCode is", circleCode)
   if (
     serviceName === "PREPAID" &&
     !circleCode
@@ -254,8 +259,8 @@ const callA1 = async ({
 
   const vendorStatus = String(
     responseData.Status ||
-      responseData.status ||
-      ""
+    responseData.status ||
+    ""
   )
     .trim()
     .toUpperCase();
@@ -331,8 +336,7 @@ const callA1 = async ({
 
     message:
       message ||
-      `A1 returned status: ${
-        vendorStatus || "UNKNOWN"
+      `A1 returned status: ${vendorStatus || "UNKNOWN"
       }`,
 
     rawResponse: responseData,

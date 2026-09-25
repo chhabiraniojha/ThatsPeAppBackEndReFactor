@@ -21,6 +21,7 @@ exports.testFulfillOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("TEST FULFILL ORDER ERROR:", error);
+    console.log(error)
 
     return res.status(500).json({
       success: false,
