@@ -6,7 +6,9 @@ const {
 
 const {
   WalletTransaction,
-} = require("../../../models/WalletModels/Wallet Transaction/walletTransaction");
+} = require(
+  "../../../models/WalletModels/Wallet Transaction/walletTransaction"
+);
 
 const {
   Referral,
@@ -14,15 +16,12 @@ const {
 
 const uidgenerate = require("../../../util/uidGenerator");
 
-
 const processReferralReward = async ({
   order,
 }) => {
-
   let transaction = null;
 
   try {
-
     /*
      * ==================================================
      * 1. BASIC VALIDATION
@@ -30,7 +29,6 @@ const processReferralReward = async ({
      */
 
     if (!order) {
-
       const error = new Error(
         "Order is required-from processReferralReward"
       );
@@ -47,9 +45,7 @@ const processReferralReward = async ({
       throw error;
     }
 
-
     if (!order.id) {
-
       const error = new Error(
         "Order ID is required-from processReferralReward"
       );
@@ -66,9 +62,7 @@ const processReferralReward = async ({
       throw error;
     }
 
-
     if (!order.userId) {
-
       const error = new Error(
         "Order userId is required-from processReferralReward"
       );
@@ -84,7 +78,6 @@ const processReferralReward = async ({
 
       throw error;
     }
-
 
     /*
      * ==================================================
@@ -105,7 +98,6 @@ const processReferralReward = async ({
       !Number.isFinite(orderAmount) ||
       orderAmount <= 0
     ) {
-
       const error = new Error(
         "Valid order amount is required-from processReferralReward"
       );
@@ -122,7 +114,6 @@ const processReferralReward = async ({
       throw error;
     }
 
-
     /*
      * ==================================================
      * 3. START DATABASE TRANSACTION
@@ -131,7 +122,6 @@ const processReferralReward = async ({
 
     transaction =
       await sequelize.transaction();
-
 
     /*
      * ==================================================
@@ -159,7 +149,6 @@ const processReferralReward = async ({
           transaction.LOCK.UPDATE,
       });
 
-
     /*
      * ==================================================
      * 5. NO REFERRAL
@@ -167,22 +156,17 @@ const processReferralReward = async ({
      */
 
     if (!referral) {
-
       await transaction.commit();
 
       transaction = null;
 
       return {
         success: true,
-
         processed: false,
-
         eligible: false,
-
         reason: "NO_REFERRAL",
       };
     }
-
 
     /*
      * ==================================================
@@ -194,32 +178,24 @@ const processReferralReward = async ({
       referral.rewardStatus ===
       "SUCCESS"
     ) {
-
       await transaction.commit();
 
       transaction = null;
 
       return {
         success: true,
-
         processed: false,
-
         eligible: true,
-
         alreadyRewarded: true,
-
         reason:
           "REWARD_ALREADY_PROCESSED",
-
         referralId:
           referral.id,
-
         rewardWalletTransactionId:
           referral.rewardWalletTransactionId ||
           null,
       };
     }
-
 
     /*
      * ==================================================
@@ -231,29 +207,22 @@ const processReferralReward = async ({
       referral.rewardStatus !==
       "PENDING"
     ) {
-
       await transaction.commit();
 
       transaction = null;
 
       return {
         success: true,
-
         processed: false,
-
         eligible: false,
-
         reason:
           "REWARD_NOT_PENDING",
-
         referralId:
           referral.id,
-
         rewardStatus:
           referral.rewardStatus,
       };
     }
-
 
     /*
      * ==================================================
@@ -264,7 +233,6 @@ const processReferralReward = async ({
      */
 
     if (!referral.referrerUserId) {
-
       const error = new Error(
         "Referrer user ID is required-from processReferralReward"
       );
@@ -280,7 +248,6 @@ const processReferralReward = async ({
 
       throw error;
     }
-
 
     /*
      * ==================================================
@@ -299,14 +266,12 @@ const processReferralReward = async ({
         referral.minimumRechargeAmount
       );
 
-
     if (
       !Number.isFinite(
         minimumRechargeAmount
       ) ||
       minimumRechargeAmount <= 0
     ) {
-
       const error = new Error(
         "Valid minimum recharge amount is required-from processReferralReward"
       );
@@ -323,7 +288,6 @@ const processReferralReward = async ({
       throw error;
     }
 
-
     /*
      * ==================================================
      * 10. CHECK RECHARGE ELIGIBILITY
@@ -334,30 +298,22 @@ const processReferralReward = async ({
       orderAmount <
       minimumRechargeAmount
     ) {
-
       await transaction.commit();
 
       transaction = null;
 
       return {
         success: true,
-
         processed: false,
-
         eligible: false,
-
         reason:
           "MINIMUM_RECHARGE_AMOUNT_NOT_MET",
-
         referralId:
           referral.id,
-
         orderAmount,
-
         minimumRechargeAmount,
       };
     }
-
 
     /*
      * ==================================================
@@ -370,14 +326,12 @@ const processReferralReward = async ({
         referral.rewardAmount
       );
 
-
     if (
       !Number.isFinite(
         rewardAmount
       ) ||
       rewardAmount <= 0
     ) {
-
       const error = new Error(
         "Valid referral reward amount is required-from processReferralReward"
       );
@@ -393,7 +347,6 @@ const processReferralReward = async ({
 
       throw error;
     }
-
 
     /*
      * ==================================================
@@ -419,9 +372,7 @@ const processReferralReward = async ({
           transaction.LOCK.UPDATE,
       });
 
-
     if (!wallet) {
-
       const error = new Error(
         "Referrer wallet not found-from processReferralReward"
       );
@@ -438,7 +389,6 @@ const processReferralReward = async ({
       throw error;
     }
 
-
     /*
      * ==================================================
      * 13. WALLET BALANCE
@@ -448,13 +398,11 @@ const processReferralReward = async ({
     const startingBalance =
       Number(wallet.balance);
 
-
     if (
       !Number.isFinite(
         startingBalance
       )
     ) {
-
       const error = new Error(
         "Invalid referrer wallet balance-from processReferralReward"
       );
@@ -471,7 +419,6 @@ const processReferralReward = async ({
       throw error;
     }
 
-
     /*
      * ==================================================
      * 14. CALCULATE NEW BALANCE
@@ -481,7 +428,6 @@ const processReferralReward = async ({
     const endingBalance =
       startingBalance +
       rewardAmount;
-
 
     /*
      * ==================================================
@@ -498,7 +444,6 @@ const processReferralReward = async ({
         transaction,
       }
     );
-
 
     /*
      * ==================================================
@@ -546,7 +491,6 @@ const processReferralReward = async ({
         }
       );
 
-
     /*
      * ==================================================
      * 17. UPDATE REFERRAL
@@ -566,11 +510,9 @@ const processReferralReward = async ({
     referral.rewardedAt =
       new Date();
 
-
     await referral.save({
       transaction,
     });
-
 
     /*
      * ==================================================
@@ -590,7 +532,6 @@ const processReferralReward = async ({
     await transaction.commit();
 
     transaction = null;
-
 
     /*
      * ==================================================
@@ -636,13 +577,9 @@ const processReferralReward = async ({
      */
 
     if (transaction) {
-
       try {
-
         await transaction.rollback();
-
       } catch (rollbackError) {
-
         error.rollbackError =
           rollbackError.message;
       }
@@ -650,13 +587,10 @@ const processReferralReward = async ({
       transaction = null;
     }
 
-
     /*
      * ==================================================
      * 21. MARK REFERRAL FAILED
      * ==================================================
-     *
-     * Important:
      *
      * Main reward transaction rollback hone ke baad
      * Referral ko alag DB operation me FAILED karenge.
@@ -666,10 +600,7 @@ const processReferralReward = async ({
      */
 
     try {
-
-      if (
-        order?.userId
-      ) {
+      if (order?.userId) {
 
         const referral =
           await Referral.findOne({
@@ -679,13 +610,11 @@ const processReferralReward = async ({
             },
           });
 
-
         if (
           referral &&
           referral.rewardStatus ===
           "PENDING"
         ) {
-
           referral.rewardStatus =
             "FAILED";
 
@@ -703,26 +632,63 @@ const processReferralReward = async ({
         referralStatusError.message;
     }
 
+    /*
+     * ==================================================
+     * 22. DIRECT THROW SEQUELIZE / DATABASE ERROR
+     * ==================================================
+     *
+     * Sequelize / DB error ko generic error me
+     * wrap nahi karna hai.
+     */
+
+    if (
+      error?.name?.startsWith(
+        "Sequelize"
+      )
+    ) {
+      throw error;
+    }
 
     /*
      * ==================================================
-     * 22. PRESERVE STRUCTURED ERROR
+     * 23. DIRECT THROW NETWORK ERROR
+     * ==================================================
+     */
+
+    const networkErrorCodes = [
+      "ECONNRESET",
+      "ECONNREFUSED",
+      "ETIMEDOUT",
+      "ENOTFOUND",
+      "EHOSTUNREACH",
+      "ECONNABORTED",
+    ];
+
+    if (
+      networkErrorCodes.includes(
+        error?.code
+      )
+    ) {
+      throw error;
+    }
+
+    /*
+     * ==================================================
+     * 24. PRESERVE STRUCTURED ERROR
      * ==================================================
      */
 
     if (
-      error.code &&
-      error.message &&
-      error.debugMessage
+      error?.code &&
+      error?.message &&
+      error?.debugMessage
     ) {
-
       throw error;
     }
 
-
     /*
      * ==================================================
-     * 23. STRUCTURED ERROR
+     * 25. UNKNOWN / UNSTRUCTURED ERROR
      * ==================================================
      */
 
@@ -742,17 +708,16 @@ const processReferralReward = async ({
 
     structuredError.rawResponse = {
       originalError:
-        error.message,
+        error?.message || null,
 
       referralStatusUpdateError:
-        error.referralStatusUpdateError ||
+        error?.referralStatusUpdateError ||
         null,
     };
 
     throw structuredError;
   }
 };
-
 
 module.exports = {
   processReferralReward,
