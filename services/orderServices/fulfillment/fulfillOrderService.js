@@ -1,4 +1,7 @@
 const {
+  processReferralReward,
+} = require("./processReferralReward");
+const {
   getOrderForFulfillment,
 } = require("./getOrderForFulfillment");
 
@@ -960,8 +963,6 @@ const fulfillOrderService = async ({
       "[FULFILL] Processed Vendor Transaction ID:",
       processedResult?.vendorTransactionId
     );
-
-
     /*
      * ==================================================
      * 9. VENDOR SUCCESS
@@ -977,31 +978,139 @@ const fulfillOrderService = async ({
         "[FULFILL] Vendor SUCCESS"
       );
 
+      /*
+       * ------------------------------------------------
+       * 9.1 UPDATE ORDER SUCCESS
+       * ------------------------------------------------
+       */
+
       await updateOrderStatus({
         order,
-        vendorStatus:
-          "SUCCESS",
+        vendorStatus: "SUCCESS",
       });
+
+      /*
+       * ------------------------------------------------
+       * 9.2 UPDATE TRANSACTION HISTORY SUCCESS
+       * ------------------------------------------------
+       */
 
       await updateTransactionHistory({
         order,
-        status:
-          "SUCCESS",
+        status: "SUCCESS",
       });
+
+      /*
+       * ------------------------------------------------
+       * 9.3 PROCESS REFERRAL REWARD
+       * ------------------------------------------------
+       *
+       * IMPORTANT:
+       *
+       * Recharge already SUCCESS ho chuka hai.
+       *
+       * Referral reward fail hone par
+       * order FAILED nahi hoga.
+       *
+       * Referral ka status alag se FAILED hoga.
+       */
+
+      let referralRewardResult = null;
+
+      try {
+
+        console.log(
+          "[FULFILL] Processing referral reward..."
+        );
+
+        referralRewardResult =
+          await processReferralReward({
+            order,
+          });
+
+        console.log(
+          "[FULFILL] Referral reward processing completed"
+        );
+
+        console.log(
+          "[FULFILL] Referral Reward Result:",
+          referralRewardResult
+        );
+
+      } catch (error) {
+
+        /*
+         * Referral failure ko order failure
+         * nahi banana hai.
+         *
+         * Recharge SUCCESS hi rahega.
+         */
+
+        console.log(
+          "[FULFILL] Referral reward processing failed"
+        );
+
+        console.log(
+          "[FULFILL] Referral Error Code:",
+          error.code || "UNKNOWN_ERROR"
+        );
+
+        console.log(
+          "[FULFILL] Referral Error Message:",
+          error.message
+        );
+
+        /*
+         * IMPORTANT:
+         *
+         * Yahan error throw nahi karenge.
+         *
+         * Isliye fulfillOrderService SUCCESS return karega.
+         */
+
+        referralRewardResult = {
+          success: false,
+
+          processed: false,
+
+          failed: true,
+
+          errorCode:
+            error.code ||
+            "REFERRAL_REWARD_FAILED",
+
+          message:
+            error.message ||
+            "Referral reward processing failed",
+        };
+      }
+
+      /*
+       * ------------------------------------------------
+       * 9.4 FINAL SUCCESS RESPONSE
+       * ------------------------------------------------
+       */
 
       return {
         success: true,
+
         orderId,
+
         status: "SUCCESS",
+
         vendor,
+
         attemptId:
           attempt.id,
+
         vendorTransactionId:
           processedResult.vendorTransactionId ||
           null,
+
+        referralReward:
+          referralRewardResult,
       };
     }
-
 
     /*
      * ==================================================
