@@ -1,4 +1,4 @@
-const { sequelize } = require("../../../util/db_connect");
+const  sequelize  = require("../../../util/db_connect");
 
 const {
   Wallet,
