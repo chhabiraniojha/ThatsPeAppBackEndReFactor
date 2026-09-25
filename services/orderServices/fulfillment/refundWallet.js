@@ -1,9 +1,7 @@
 const sequelize = require("../../../util/db_connect");
-const { Op } = require("sequelize");
 
 const Wallet = require("../../../models/WalletModels/WalletSchema/wallet");
 const WalletTransaction = require("../../../models/WalletModels/Wallet Transaction/walletTransaction");
-const Order = require("../../../models/OrderModel/order");
 const uidgenerate = require("../../../util/uidGenerator");
 
 const refundWallet = async ({
@@ -11,7 +9,7 @@ const refundWallet = async ({
 }) => {
   /*
    * --------------------------------------------------
-   * 1. Basic Validation
+   * 1. BASIC VALIDATION
    * --------------------------------------------------
    */
 
@@ -47,30 +45,34 @@ const refundWallet = async ({
 
   /*
    * --------------------------------------------------
-   * 2. Refund Amount
+   * 2. REFUND AMOUNT
    * --------------------------------------------------
    *
-   * Wallet se actual debit hua tha order.walletAmount.
+   * Order failure hone par user ne jitna total
+   * amount pay kiya tha, wahi pura amount wallet
+   * me refund hoga.
    *
-   * Isliye refund bhi wahi amount hoga.
-   *
-   * UPI-only order:
-   * walletAmount = 0
+   * UPI:
+   * finalPayableAmount = online paid amount
    *
    * WALLET:
-   * walletAmount = full amount
+   * finalPayableAmount = wallet paid amount
    *
    * COMBO:
-   * walletAmount = wallet portion
+   * finalPayableAmount =
+   * wallet amount + online paid amount
+   *
+   * Isliye refund ke liye finalPayableAmount
+   * ko source of truth maana jayega.
    */
 
   const refundAmount = Number(
-    order.walletAmount
+    order.finalPayableAmount
   );
 
   if (
     !Number.isFinite(refundAmount) ||
-    refundAmount < 0
+    refundAmount <= 0
   ) {
     const error = new Error(
       "Invalid wallet refund amount"
@@ -85,38 +87,14 @@ const refundWallet = async ({
 
   /*
    * --------------------------------------------------
-   * 3. Nothing To Refund
-   * --------------------------------------------------
-   */
-
-  if (refundAmount === 0) {
-    return {
-      success: true,
-
-      orderId: order.id,
-
-      refunded: false,
-
-      alreadyRefunded: false,
-
-      refundAmount: 0,
-
-      walletTransactionId: null,
-
-      message:
-        "No wallet amount is available for refund",
-    };
-  }
-
-  /*
-   * --------------------------------------------------
-   * 4. Start Short DB Transaction
+   * 3. START DATABASE TRANSACTION
    * --------------------------------------------------
    *
-   * Vendor API yahan call nahi hoga.
+   * Wallet balance aur refund transaction
+   * ek hi DB transaction ke andar honge.
    *
-   * Sirf wallet + refund transaction DB operation
-   * ek transaction ke andar hoga.
+   * Agar koi operation fail hota hai,
+   * pura transaction rollback hoga.
    */
 
   const transaction =
@@ -125,10 +103,12 @@ const refundWallet = async ({
   try {
     /*
      * ------------------------------------------------
-     * 5. Get Wallet
+     * 4. GET USER WALLET
      * ------------------------------------------------
      *
-     * Row lock use kar rahe hain.
+     * UPDATE lock use kar rahe hain taaki
+     * same wallet par concurrent refund/debit
+     * safely handle ho sake.
      */
 
     const wallet = await Wallet.findOne({
@@ -155,13 +135,13 @@ const refundWallet = async ({
 
     /*
      * ------------------------------------------------
-     * 6. Check Existing Refund
+     * 5. CHECK EXISTING REFUND
      * ------------------------------------------------
      *
-     * Same order ke liye already successful
-     * REFUND transaction hai ya nahi.
+     * Same order ke liye agar pehle hi successful
+     * refund ho chuka hai to dobara refund nahi karna.
      *
-     * Ye idempotency ka important part hai.
+     * Ye idempotency protection hai.
      */
 
     const existingRefund =
@@ -207,7 +187,7 @@ const refundWallet = async ({
 
     /*
      * ------------------------------------------------
-     * 7. Starting Balance
+     * 6. STARTING BALANCE
      * ------------------------------------------------
      */
 
@@ -217,7 +197,7 @@ const refundWallet = async ({
 
     /*
      * ------------------------------------------------
-     * 8. Calculate Ending Balance
+     * 7. CALCULATE ENDING BALANCE
      * ------------------------------------------------
      */
 
@@ -226,7 +206,7 @@ const refundWallet = async ({
 
     /*
      * ------------------------------------------------
-     * 9. Credit Wallet
+     * 8. CREDIT WALLET
      * ------------------------------------------------
      */
 
@@ -241,7 +221,7 @@ const refundWallet = async ({
 
     /*
      * ------------------------------------------------
-     * 10. Create Refund Wallet Transaction
+     * 9. CREATE REFUND WALLET TRANSACTION
      * ------------------------------------------------
      */
 
@@ -275,7 +255,7 @@ const refundWallet = async ({
 
     /*
      * ------------------------------------------------
-     * 11. Commit
+     * 10. COMMIT TRANSACTION
      * ------------------------------------------------
      */
 
@@ -283,7 +263,7 @@ const refundWallet = async ({
 
     /*
      * ------------------------------------------------
-     * 12. Return
+     * 11. RETURN SUCCESS
      * ------------------------------------------------
      */
 
@@ -311,7 +291,7 @@ const refundWallet = async ({
   } catch (error) {
     /*
      * ------------------------------------------------
-     * Rollback
+     * 12. ROLLBACK
      * ------------------------------------------------
      */
 
