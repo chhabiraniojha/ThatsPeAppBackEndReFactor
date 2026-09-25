@@ -1037,7 +1037,7 @@ const fulfillOrderService = async ({
           referralRewardResult
         );
 
-      } catch (error) {
+            } catch (error) {
 
         /*
          * Referral failure ko order failure
@@ -1051,21 +1051,54 @@ const fulfillOrderService = async ({
         );
 
         console.log(
+          "[FULFILL] Referral Error Name:",
+          error?.name
+        );
+
+        console.log(
           "[FULFILL] Referral Error Code:",
-          error.code || "UNKNOWN_ERROR"
+          error?.code
         );
 
         console.log(
           "[FULFILL] Referral Error Message:",
-          error.message
+          error?.message
+        );
+
+        console.log(
+          "[FULFILL] Referral Debug Message:",
+          error?.debugMessage
+        );
+
+        console.log(
+          "[FULFILL] Referral Original Error:",
+          error?.parent?.message ||
+          error?.original?.message ||
+          null
+        );
+
+        console.log(
+          "[FULFILL] Referral SQL State:",
+          error?.parent?.sqlState ||
+          error?.original?.sqlState ||
+          null
+        );
+
+        console.log(
+          "[FULFILL] Referral Errno:",
+          error?.parent?.errno ||
+          error?.original?.errno ||
+          null
         );
 
         /*
          * IMPORTANT:
          *
-         * Yahan error throw nahi karenge.
+         * Referral fail hone par order/recharge
+         * SUCCESS hi rahega.
          *
-         * Isliye fulfillOrderService SUCCESS return karega.
+         * Actual error ko preserve kar rahe hain
+         * taaki testing me exact problem dikhe.
          */
 
         referralRewardResult = {
@@ -1076,12 +1109,39 @@ const fulfillOrderService = async ({
           failed: true,
 
           errorCode:
-            error.code ||
+            error?.code ||
             "REFERRAL_REWARD_FAILED",
 
           message:
-            error.message ||
+            error?.message ||
             "Referral reward processing failed",
+
+          errorName:
+            error?.name ||
+            null,
+
+          debugMessage:
+            error?.debugMessage ||
+            null,
+
+          originalError:
+            error?.parent?.message ||
+            error?.original?.message ||
+            null,
+
+          sqlState:
+            error?.parent?.sqlState ||
+            error?.original?.sqlState ||
+            null,
+
+          errno:
+            error?.parent?.errno ||
+            error?.original?.errno ||
+            null,
+
+          rawResponse:
+            error?.rawResponse ||
+            null,
         };
       }
 
