@@ -1,18 +1,10 @@
 const  sequelize  = require("../../../util/db_connect");
 
-const {
-  Wallet,
-} = require("../../../models/WalletModels/WalletSchema/wallet");
+const Wallet = require("../../../models/WalletModels/WalletSchema/wallet");
 
-const {
-  WalletTransaction,
-} = require(
-  "../../../models/WalletModels/Wallet Transaction/walletTransaction"
-);
+const  WalletTransaction = require("../../../models/WalletModels/Wallet Transaction/walletTransaction");
 
-const {
-  Referral,
-} = require("../../../models/ReferralModel/Referral");
+const Referral = require("../../../models/ReferralModel/Referral");
 
 const uidgenerate = require("../../../util/uidGenerator");
 
@@ -569,6 +561,7 @@ const processReferralReward = async ({
     };
 
   } catch (error) {
+    console.log(error)
 
     /*
      * ==================================================
