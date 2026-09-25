@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const pollA1Status = require("./pollA1Status");
+const {pollA1Status} = require("./pollA1Status");
 
 const callA1 = async ({
   order,
