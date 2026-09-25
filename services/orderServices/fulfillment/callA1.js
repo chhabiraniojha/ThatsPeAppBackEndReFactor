@@ -49,10 +49,6 @@ const callA1 = async ({
     throw error;
   }
 
-  console.log("serviceName:", serviceName);
-  console.log("order.circleId:", order.circleId);
-  console.log("order:", order);
-
   /*
    * --------------------------------------------------
    * 2. ORDER DATA
