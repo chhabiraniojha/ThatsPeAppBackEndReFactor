@@ -62,8 +62,6 @@ const updateTransactionHistory = async ({
     String(status).toUpperCase();
 
   const allowedStatuses = [
-    "CREATED",
-    "PROCESSING",
     "PENDING",
     "SUCCESS",
     "FAILED",
@@ -169,8 +167,7 @@ const updateTransactionHistory = async ({
    */
 
   if (
-    currentStatus === "FAILED" &&
-    transactionStatus !== "FAILED"
+    currentStatus === "FAILED" 
   ) {
     return {
       success: true,
@@ -218,65 +215,18 @@ const updateTransactionHistory = async ({
    * 8. VALIDATE STATUS TRANSITION
    * --------------------------------------------------
    *
-   * CREATED
-   *    ↓
-   * PROCESSING
-   *
    * PROCESSING
    *    ├── PENDING
    *    ├── SUCCESS
    *    └── FAILED
-   *
-   * PENDING
-   *    └── SUCCESS
-   *
-   * SUCCESS / FAILED
-   *    └── FINAL
+ 
    */
 
-  const validTransitions = {
-    CREATED: [
-      "PROCESSING",
-    ],
 
-    PROCESSING: [
-      "PENDING",
-      "SUCCESS",
-      "FAILED",
-    ],
-
-    PENDING: [
-      "SUCCESS",
-    ],
-
-    SUCCESS: [],
-
-    FAILED: [],
-  };
 
   const allowedNextStatuses =
     validTransitions[currentStatus] || [];
 
-  if (
-    !allowedNextStatuses.includes(
-      transactionStatus
-    )
-  ) {
-    const error = new Error(
-      `Invalid transaction history status transition: ${currentStatus} -> ${transactionStatus}`
-    );
-
-    error.message =
-      `Invalid transaction history status transition: ${currentStatus} -> ${transactionStatus}`;
-
-    error.debugMessage =
-      "error from updateTransactionHistory.js";
-
-    error.code =
-      "INVALID_TRANSACTION_HISTORY_STATUS_TRANSITION";
-
-    throw error;
-  }
 
 
   /*
@@ -299,7 +249,7 @@ const updateTransactionHistory = async ({
         where: {
           id: transactionHistory.id,
 
-          status: currentStatus,
+          status: "PROCESSING",
         },
       }
     );

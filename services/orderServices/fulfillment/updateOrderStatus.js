@@ -163,9 +163,7 @@ const updateOrderStatus = async ({
 
           status: {
             [Op.in]: [
-              "CREATED",
               "PROCESSING",
-              "PENDING",
             ],
           },
         },
@@ -218,7 +216,7 @@ const updateOrderStatus = async ({
   if (status === "FAILED") {
     [affectedRows] = await Order.update(
       {
-        status: "PROCESSING",
+        status: "FAILED",
       },
       {
         where: {
