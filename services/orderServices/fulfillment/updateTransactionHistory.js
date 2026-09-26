@@ -224,10 +224,6 @@ const updateTransactionHistory = async ({
 
 
 
-  const allowedNextStatuses =
-    validTransitions[currentStatus] || [];
-
-
 
   /*
    * --------------------------------------------------
