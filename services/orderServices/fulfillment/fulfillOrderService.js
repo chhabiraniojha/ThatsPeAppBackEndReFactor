@@ -1233,12 +1233,6 @@ const fulfillOrderService = async ({
        * Order PROCESSING hi rahega.
        */
 
-      await updateOrderStatus({
-        order,
-        vendorStatus:
-          "FAILED",
-      });
-
 
       console.log(
         "[FULFILL] Vendor FAILED."
