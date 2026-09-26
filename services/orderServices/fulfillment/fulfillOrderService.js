@@ -1239,12 +1239,6 @@ const fulfillOrderService = async ({
           "FAILED",
       });
 
-      await updateTransactionHistory({
-        order,
-        status:
-          "PROCESSING",
-      });
-
 
       console.log(
         "[FULFILL] Vendor FAILED."
