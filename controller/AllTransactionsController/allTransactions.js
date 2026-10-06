@@ -10,111 +10,195 @@ const availableAPIIdModel = require('../../models/APIModels/api');
 const subCategoryModel = require('../../models/SubCategoryModel/subCategory');
 const { all } = require('axios');
 
-function buildWhereCondition(startingDate, endingDate, subcategoryId, userId, paymentTransactionType) {
-  let whereCondition = {};
 
-  if (userId) {
-    whereCondition.userId = userId;
-  }
-  if (startingDate && endingDate) {
-    whereCondition.createdAt = {
-      [Op.between]: [startingDate, endingDate]
+
+const TransactionHistory = require(
+    "../../models/RechargeAndBillPaymentTransactionsModels/rechargeAndBillPaymentTransactions"
+);
+
+const Order = require("../../models/OrderModel/order");
+const SubCategory = require("../../models/SubCategoryModel/subCategory");
+const OperatorData = require("../../models/OperatorDataModel/operatorData");
+const CircleData = require("../../models/CircleDataModel/circleData");
+
+function buildWhereCondition(
+    startingDate,
+    endingDate,
+    serviceType,
+    paymentMethod,
+    status,
+    userId
+) {
+    const whereCondition = {
+        userId,
     };
-  }
-  if (subcategoryId) {
-    // Parse subcategoryId if it's a JSON string
-    if (typeof subcategoryId === 'string') {
-      try {
-        subcategoryId = JSON.parse(subcategoryId);
-      } catch (error) {
-        console.error('Error parsing subcategoryId:', error);
-      }
+
+    // Date filter
+    if (startingDate && endingDate) {
+        whereCondition.createdAt = {
+            [Op.between]: [startingDate, endingDate],
+        };
+    } else if (startingDate) {
+        whereCondition.createdAt = {
+            [Op.gte]: startingDate,
+        };
+    } else if (endingDate) {
+        whereCondition.createdAt = {
+            [Op.lte]: endingDate,
+        };
     }
 
-    if (Array.isArray(subcategoryId) && subcategoryId.length > 0) {
-      whereCondition.subCategoryId = {
-        [Op.in]: subcategoryId
-      };
-    } else if (subcategoryId) {
-      whereCondition.subCategoryId = subcategoryId;
-    }
-  }
-
-  // Handle paymentTransactionType filter
-  if (paymentTransactionType) {
-    // If it's a JSON string, parse it
-    if (typeof paymentTransactionType === 'string') {
-      try {
-        paymentTransactionType = JSON.parse(paymentTransactionType);
-      } catch (error) {
-        console.error('Error parsing paymentTransactionType:', error);
-      }
+    // Service / SubCategory filter
+    if (serviceType) {
+        whereCondition["$order.serviceType$"] = serviceType;
     }
 
-    if (Array.isArray(paymentTransactionType) && paymentTransactionType.length > 0) {
-      whereCondition.paymentTransactionType = {
-        [Op.in]: paymentTransactionType
-      };
-    } else if (paymentTransactionType) {
-      whereCondition.paymentTransactionType = paymentTransactionType;
+    // Payment method filter
+    if (paymentMethod) {
+        whereCondition.paymentMethod = paymentMethod;
     }
-  }
 
-  console.log(whereCondition, 'Generated whereCondition');
-  return whereCondition;
+    // Transaction status filter
+    if (status) {
+        whereCondition.status = status;
+    }
+
+    return whereCondition;
 }
 
-exports.getAllTransactions = async (req, res) => {
-  const userId = req.user.id;
-  const { startingDate, endingDate, subcategoryId, pageNumber, paymentTransactionType } = req.query;
+exports.getAllTransactions = async (req, res, next) => {
+    const userId = req.user?.id;
 
-  try {
-    let whereCondition = {};
-    if (!startingDate && !endingDate && !subcategoryId && !paymentTransactionType) {
-      whereCondition = {};
+    const {
+        startingDate,
+        endingDate,
+        serviceType,
+        paymentMethod,
+        status,
+        pageNumber = 1,
+    } = req.query;
+
+    try {
+        // Authentication check
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized user",
+                success: false,
+            });
+        }
+
+        // Validate page number
+        const page = Number(pageNumber);
+
+        if (!Number.isInteger(page) || page < 1) {
+            return res.status(400).json({
+                message: "Invalid page number",
+                success: false,
+            });
+        }
+
+        // Build filters
+        const whereCondition = buildWhereCondition(
+            startingDate,
+            endingDate,
+            serviceType,
+            paymentMethod,
+            status,
+            userId
+        );
+
+        const limit = 5;
+        const offset = (page - 1) * limit;
+
+        // Fetch transactions with total count
+        const {
+            rows: transactionDetails,
+            count: totalRecords,
+        } = await TransactionHistory.findAndCountAll({
+            where: whereCondition,
+
+            include: [
+                {
+                    model: Order,
+                    as: "order",
+                    required: true,
+                    attributes: [
+                        "id",
+                        "serviceType",
+                        "operatorId",
+                        "circleId",
+                        "fields",
+                        "amount",
+                        "operatorDiscount",
+                        "referralDiscount",
+                        "discountedAmount",
+                        "convenienceFee",
+                        "finalPayableAmount",
+                        "paymentMethod",
+                        "walletAmount",
+                        "onlinePaidAmount",
+                        "status",
+                        "createdAt",
+                    ],
+
+                    include: [
+                        {
+                            model: SubCategory,
+                            as: "service",
+                            attributes: [
+                                "id",
+                                "name",
+                                "icon",
+                            ],
+                        },
+                        {
+                            model: OperatorData,
+                            as: "operator",
+                            attributes: [
+                                "id",
+                                "name",
+                                "operatorImage",
+                                "status",
+                            ],
+                        },
+                        {
+                            model: CircleData,
+                            as: "circle",
+                            required: false,
+                            attributes: [
+                                "id",
+                                "name",
+                                "status",
+                            ],
+                        },
+                    ],
+                },
+            ],
+
+            order: [["createdAt", "DESC"]],
+            offset,
+            limit,
+            distinct: true,
+        });
+
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        return res.status(200).json({
+            message: "Transaction details fetched successfully",
+            success: true,
+            transactionDetails,
+            pagination: {
+                currentPage: page,
+                limit,
+                totalRecords,
+                totalPages,
+            },
+        });
+    } catch (error) {
+        next(error);
     }
-
-    whereCondition = buildWhereCondition(startingDate, endingDate, subcategoryId, userId, paymentTransactionType);
-
-    const transactionDetails = await allTransactionsModel.findAll({
-      where: whereCondition,
-      order: [['createdAt', 'DESC']],
-      offset: (pageNumber - 1) * 5,
-      limit: 5
-    });
-    // console.log(transactionDetails)
-    // adding operator icon in to transation object
-    let operatorNames = new Set();
-    transactionDetails.forEach((tx) => operatorNames.add(tx.operator));
-    // console.log(operatorNames)
-
-    const operatorDetails = await operatorModel.findAll({
-      where: { name: [...operatorNames] },
-      attributes: ['name', 'operator_image']
-    });
-    // console.log(operatorDetails)
-
-    const operatorMap = {};
-    operatorDetails.forEach((op) => {
-      operatorMap[op.name] = op.operator_image;
-    });
-    console.log(operatorMap);
-    transactionDetails.forEach((transaction) => {
-      transaction.dataValues.icon = operatorMap[transaction.dataValues.operator] || null;
-    });
-    // console.log(transactionDetails);
-
-    return res.status(200).json({
-      message: 'Transaction details fetched successfully',
-      success: true,
-      statuscode: 1,
-      transactionDetails
-    });
-  } catch (error) {
-    // console.log(error);
-    return res.status(500).json({ message: 'Internal Server Error', success: false, error });
-  }
 };
+
 
 exports.getSpexificTransaction = async (req, res) => {
   const { transactionId } = req.query;

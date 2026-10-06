@@ -1,5 +1,4 @@
 const jwt = require("jsonwebtoken");
-const Sentry = require("@sentry/node");
 
 const logger = require("../util/logger");
 
@@ -133,23 +132,7 @@ const SignupTokenVerify = async (req, res, next) => {
     // 9. Unexpected error
     // ========================================
 
-    logger.error(
-      "Unexpected error during signup token verification",
-      {
-        route: "/user/signup",
-        errorName:
-          error?.name || "UNKNOWN_ERROR",
-        errorMessage:
-          error?.message || "Unknown error"
-      }
-    );
-
-    Sentry.captureException(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
+    next(error);
   }
 };
 

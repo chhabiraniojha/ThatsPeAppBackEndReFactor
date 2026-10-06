@@ -11,6 +11,9 @@ const requestIp = require('request-ip');
 const sequelize = require('../../util/db_connect');
 const Sequelize = require('sequelize');
 const { sendEmail } = require('../../util/nodeMailerConfig');
+const Sentry = require("@sentry/node");
+const logger = require("../../util/logger");
+
 
 // ---------------CREATE WALLET-----------------
 exports.createWallet = async (req, res) => {
@@ -27,18 +30,47 @@ exports.createWallet = async (req, res) => {
 };
 
 // ---------------GET WALLET AMOUNT-----------------
-exports.getWalletDetails = async (req, res) => {
-  const userId = req.user.id;
-  try {
-    const wallet = await walletModel.findOne({ where: { userId: userId } });
-    if (wallet == null) {
-      return res.status(200).json({ message: 'Wallet not created', success: false, statuscode: 0 });
+
+exports.getWalletDetails = async (req, res, next) => {
+    const userId = req.user?.id;
+
+    try {
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized user",
+                success: false,
+            });
+        }
+
+        const wallet = await walletModel.findOne({
+            where: {
+                userId,
+            },
+            attributes: [
+                "id",
+                "userId",
+                "balance",
+                "status",
+            ],
+        });
+
+        if (!wallet) {
+            return res.status(404).json({
+                message: "Wallet not found",
+                success: false,
+            });
+        }
+
+        return res.status(200).json({
+            message: "Your wallet details fetched successfully",
+            success: true,
+            wallet,
+        });
+    } catch (error) {
+        next(error);
     }
-    return res.status(200).json({ message: 'Your wallet details fetched successfully', success: true, statuscode: 1, wallet });
-  } catch (error) {
-    return res.status(500).json({ message: 'Internal Server Error', success: false });
-  }
 };
+
 
 // ---------------DEBIT WALLET AMOUNT-----------------
 

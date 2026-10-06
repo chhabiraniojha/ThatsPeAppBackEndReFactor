@@ -5,6 +5,7 @@ const Sentry = require('@sentry/node');
 const http = require('http');
 const setupSocketIO = require('./controller/Socket/SocketId');
 const logger = require('./util/logger');
+const errorHandler = require('./middelWare/errorHandler');
 
 dotenv.config();
 
@@ -27,15 +28,15 @@ const ReferralConfig = require("./models/ReferralModel/ReferralConfig");
 const Referral = require("./models/ReferralModel/Referral");
 const Coupon = require("./models/CouponModels/Coupon");
 const UserCoupons = require("./models/CouponModels/UserCoupons");
-const MobiKwikOperator=require("./models/MobikwikModel/MobikwikOperator");
-const MobiKwikCCBPBankList=require("./models/MobikwikModel/MobikwikCCBPBankLIst");
-const MobiKwikDistrictDiscom=require("./models/MobikwikModel/MobiKwikDistrictDiscom");
-const MobiKwikHPCLDistributorList=require("./models/MobikwikModel/MobiKwikHPCLDistributorList");
-const MobiKwikShriramGeneralInsuranceQuotePay=require("./models/MobikwikModel/MobiKwikShriramGeneralInsuranceQuotePay");
-const MobiKwikMadhyaPradeshUrban=require("./models/MobikwikModel/MobiKwikMadhyaPradeshUrban");
-const MobiKwikOdishaMunicipalPayments=require("./models/MobikwikModel/MobiKwikOdishaMunicipalPayments");
-const MobiKwikJharkhandSubdivisionCodeList=require("./models/MobikwikModel/MobiKwikJharkhandSubdivisionCodeList");
-const ConvenienceFee=require("./models/ConvenienceFeeModel/ConvenienceFee")
+const MobiKwikOperator = require("./models/MobikwikModel/MobikwikOperator");
+const MobiKwikCCBPBankList = require("./models/MobikwikModel/MobikwikCCBPBankLIst");
+const MobiKwikDistrictDiscom = require("./models/MobikwikModel/MobiKwikDistrictDiscom");
+const MobiKwikHPCLDistributorList = require("./models/MobikwikModel/MobiKwikHPCLDistributorList");
+const MobiKwikShriramGeneralInsuranceQuotePay = require("./models/MobikwikModel/MobiKwikShriramGeneralInsuranceQuotePay");
+const MobiKwikMadhyaPradeshUrban = require("./models/MobikwikModel/MobiKwikMadhyaPradeshUrban");
+const MobiKwikOdishaMunicipalPayments = require("./models/MobikwikModel/MobiKwikOdishaMunicipalPayments");
+const MobiKwikJharkhandSubdivisionCodeList = require("./models/MobikwikModel/MobiKwikJharkhandSubdivisionCodeList");
+const ConvenienceFee = require("./models/ConvenienceFeeModel/ConvenienceFee")
 // Models extraction ends here
 
 const bodyParser = require('body-parser');
@@ -72,7 +73,7 @@ const addTowallet = require('./routes/AddtoWalletRoutes/addToWallet');
 const razorpayRoute = require('./routes/PaymentRoutes/razorpay');
 const zaakpayRoute = require('./routes/PaymentRoutes/zaakpay');
 const { initializeSocket } = require('./util/socket');
-const orderRoute=require('./routes/OrderRoute/order')
+const orderRoute = require('./routes/OrderRoute/order')
 
 
 // -----------------------------------------
@@ -153,6 +154,13 @@ const startServer = async () => {
   // -----------------------------------------
 
   Sentry.setupExpressErrorHandler(app);
+
+  // -----------------------------------------
+  // Global Error Handler
+  // IMPORTANT: This must be AFTER Sentry
+  // -----------------------------------------
+
+  app.use(errorHandler);
 
 
   // -----------------------------------------

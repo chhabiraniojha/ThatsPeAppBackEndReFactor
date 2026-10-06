@@ -1,17 +1,26 @@
 const Banner = require("../../models/BannerModel/banner");
 
-
-exports.getBanners = async (req, res) => {
+exports.getBanners = async (req, res, next) => {
     try {
-        const bannerData = await Banner.findAll()
+        const bannerData = await Banner.findAll({
+            where: {
+                status: "active",
+            },
+            attributes: [
+                "id",
+                "bannerImage",
+                "displayOrder",
+                "status",
+            ],
+            order: [["displayOrder", "ASC"]],
+        });
 
-
-        return res.status(200).json({ message: "Banner Data Fetch Successfully", success: true, statuscode: 1, bannerData })
+        return res.status(200).json({
+            message: "Banner data fetched successfully",
+            success: true,
+            bannerData,
+        });
+    } catch (error) {
+        next(error);
     }
-
-    catch (error) {
-        return res.status(500).json({ message: "Internal Server Error", success: false })
-
-    }
-
-}
+};

@@ -12,6 +12,7 @@ const { Op } = require("sequelize");
 const Sentry = require("@sentry/node");
 const ReferralConfig = require("../../models/ReferralModel/ReferralConfig");
 const Referral = require("../../models/ReferralModel/Referral");
+const Maintenance=require("../../models/MaintenanceModel/maintenance")
 
 const {
   generateAccessToken,
@@ -59,7 +60,7 @@ const decrypt = (text) => {
 // let message = "your otp is 1234 this is a test otp"
 // ------------------ SIGNUP --------------
 
-exports.signup = async (req, res) => {
+exports.signup = async (req, res, next) => {
   let transaction = null;
 
   try {
@@ -143,7 +144,6 @@ exports.signup = async (req, res) => {
 
     // --------------------------------
     // 6. Generate unique referral code
-    //    Existing project utility
     // --------------------------------
     const referralCode = await generateReferralCode(transaction);
 
@@ -286,7 +286,7 @@ exports.signup = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error)
+
     // --------------------------------
     // Rollback transaction
     // --------------------------------
@@ -296,7 +296,8 @@ exports.signup = async (req, res) => {
       } catch (rollbackError) {
         logger.error("Signup transaction rollback failed", {
           route: "/user/signup",
-          errorName: rollbackError?.name || "UNKNOWN_ERROR",
+          errorName:
+            rollbackError?.name || "UNKNOWN_ERROR",
           errorMessage:
             rollbackError?.message || "Unknown rollback error",
         });
@@ -304,33 +305,19 @@ exports.signup = async (req, res) => {
     }
 
     // --------------------------------
-    // Log error
-    // --------------------------------
-    logger.error("Signup failed", {
-      route: "/user/signup",
-      errorName: error?.name || "UNKNOWN_ERROR",
-      errorMessage: error?.message || "Unknown error",
-    });
-
-    Sentry.captureException(error);
-
-    // --------------------------------
     // Unique constraint error
     // --------------------------------
     if (error?.name === "SequelizeUniqueConstraintError") {
-      return res.status(409).json({
-        success: false,
-        message: "User information already exists",
-      });
+      error.statusCode = 409;
+      error.publicMessage =
+        "User information already exists";
     }
 
     // --------------------------------
-    // Generic error
+    // Send unexpected error to
+    // global error handler
     // --------------------------------
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    next(error);
   }
 };
 
@@ -471,26 +458,116 @@ exports.updatePassword = async (req, res) => {
 };
 
 // ---------------UPDATE USER DETAILS------------------
-exports.updateUserDetails = async (req, res) => {
-  const user = req.user;
-  let { email, name, mobileNo } = req.body;
-  if (typeof email == 'string') {
-    email.trim();
-  }
 
-  try {
-    await user.update({ name, email, mobileNo });
-    return res.status(200).json({ message: 'User Details Updated Successfully ', success: true, statuscode: 0 });
-  } catch (error) {
-    // console.log(error)
-    Logger.error({
-      error_message: error ? error.name : 'catch error form user details update',
-      user: user.email,
-      url: '/user/update-userdetails',
-      http_method: 'post',
-      status_code: '0'
-    });
+exports.updateUserDetails = async (req, res, next) => {
+    const user = req.user;
 
-    res.status(500).json({ message: 'Internal Server Error', success: false });
-  }
+    try {
+        if (!user) {
+            return res.status(401).json({
+                message: "Unauthorized user",
+                success: false,
+            });
+        }
+        // Check latest maintenance status
+        const maintenance = await Maintenance.findOne({
+            order: [["createdAt", "DESC"]],
+            attributes: ["maintenanceStatus"],
+        });
+
+        if (maintenance?.maintenanceStatus === true) {
+            return res.status(403).json({
+                message:
+                    "Application is currently under maintenance. Please try again later.",
+                success: false,
+            });
+        }
+        let { email, name, mobileNo } = req.body;
+
+        const updateData = {};
+
+        // Update name only if provided
+        if (name !== undefined) {
+            if (typeof name !== "string" || !name.trim()) {
+                return res.status(400).json({
+                    message: "Invalid name",
+                    success: false,
+                });
+            }
+
+            updateData.name = name.trim();
+        }
+
+        // Update email only if provided
+        if (email !== undefined) {
+            if (typeof email !== "string" || !email.trim()) {
+                return res.status(400).json({
+                    message: "Invalid email",
+                    success: false,
+                });
+            }
+
+            email = email.trim().toLowerCase();
+
+            const emailRegex =
+                /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({
+                    message: "Invalid email",
+                    success: false,
+                });
+            }
+
+            updateData.email = email;
+        }
+
+        // Update mobile number only if provided
+        if (mobileNo !== undefined) {
+            mobileNo = String(mobileNo).trim();
+
+            if (!/^[6-9]\d{9}$/.test(mobileNo)) {
+                return res.status(400).json({
+                    message: "Invalid mobile number",
+                    success: false,
+                });
+            }
+
+            // Check whether mobile number already belongs to another user
+            if (mobileNo !== user.mobileNo) {
+                const existingUser = await userModel.findOne({
+                    where: {
+                        mobileNo,
+                    },
+                    attributes: ["id"],
+                });
+
+                if (existingUser) {
+                    return res.status(409).json({
+                        message: "Mobile number is already registered",
+                        success: false,
+                    });
+                }
+            }
+
+            updateData.mobileNo = mobileNo;
+        }
+
+        // No fields provided for update
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                message: "No user details provided for update",
+                success: false,
+            });
+        }
+
+        await user.update(updateData);
+
+        return res.status(200).json({
+            message: "User Details Updated Successfully",
+            success: true,
+        });
+    } catch (error) {
+        next(error);
+    }
 };

@@ -1,76 +1,91 @@
-const Users = require('../models/UserModels/UserSchema/user');
-const jwt = require('jsonwebtoken');
+const Users = require("../models/UserModels/UserSchema/user");
+const jwt = require("jsonwebtoken");
+const logger = require("../util/logger");
 
 const Authenticate = async (req, res, next) => {
-   const token = req.header('authorization');
-   const type = req.header('type');
-   try {
+    const token = req.header("authorization");
 
-      console.log(token)
+    try {
+        // Check if token exists
+        if (!token) {
+            return res.status(401).json({
+                message: "Authorization token is missing",
+                success: false,
+            });
+        }
 
-      // Check if token exists
-      if (!token) {
-         return res.status(200).json({
-            message: "Authorization token is missing",
-            success: false,
-            statuscode: 5
-         });
-      }
-      const { userId } = jwt.verify(token, process.env.JWT_SECRET_KEY)
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET_KEY
+        );
 
-      // console.log("userId --- >", userId);
+        const { userId } = decoded;
 
-      const user = await Users.findByPk(userId);
-      req.user = user;
-      if (user) {
-         const userPlain = user.toJSON(); // or user.get({ plain: true });
+        if (!userId) {
+            return res.status(401).json({
+                message: "Invalid token",
+                success: false,
+            });
+        }
 
-         // Exclude the password
-         const { password, ...userDetails } = userPlain;
- 
-        
-         if (type && type == "verify-token") {
-            console.log("------ token  check api  success")
-            console.log("------  userdetails",userDetails)
-            return res.status(200).json({ message: "token exists", success: true, statuscode: 1,userDetails })
-         } else {
-            next()
-         }
-      } else {
-         return res.status(200).json({ message: "token failed or user does not exists", success: false, statuscode: 5 })
-      }
+        const user = await Users.findByPk(userId);
 
+        if (!user) {
+            return res.status(401).json({
+                message: "Invalid token or user does not exist",
+                success: false,
+            });
+        }
 
-   } catch (error) {
-      console.log(error)
-      Logger.error({
-         error_message: error ? error.name : "catch error form Authentication ",
-         user: token,
-         url: "/user/token-check",
-         http_method: "get",
-         status_code: "5"
-      })
-      if (error.name === "TokenExpiredError") {
-         return res.status(200).json({
-            message: "Token has expired",
-            success: false,
-            statuscode: 5
-         });
-      }
+        req.user = user;
 
-      if (error.name === "JsonWebTokenError") {
-         return res.status(200).json({
-            message: "Invalid token",
-            success: false,
-            statuscode: 5
-         });
-      }
-      return res.status(500).json({
-         message: "Internal server error",
-         error
-      })
+        // Token verification API
+        const type = req.header("type");
 
-   }
-}
+        if (type === "verify-token") {
+            const userPlain = user.toJSON();
+
+            // Exclude password
+            const { password, ...userDetails } = userPlain;
+
+            return res.status(200).json({
+                message: "Token is valid",
+                success: true,
+                userDetails,
+            });
+        }
+
+        next();
+    } catch (error) {
+        // Token expired
+        if (error.name === "TokenExpiredError") {
+            logger.warn("Authentication token has expired", {
+                route: req.originalUrl,
+                method: req.method,
+            });
+
+            return res.status(401).json({
+                message: "Token has expired",
+                success: false,
+            });
+        }
+
+        // Invalid JWT
+        if (error.name === "JsonWebTokenError") {
+            logger.warn("Invalid authentication token", {
+                route: req.originalUrl,
+                method: req.method,
+            });
+
+            return res.status(401).json({
+                message: "Invalid token",
+                success: false,
+            });
+        }
+
+        // Unexpected authentication error
+        next(error);
+    }
+};
 
 module.exports = Authenticate;

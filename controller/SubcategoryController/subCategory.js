@@ -1,51 +1,87 @@
 const subCategoryModel = require('../../models/SubCategoryModel/subCategory')
 const categoryModel = require('../../models/CategoryModel/category')
+const Sentry = require("@sentry/node");
+const logger = require("../../util/logger");
 
 
-exports.getServices = async (req, res) => {
+exports.getServices = async (req, res, next) => {
     try {
-        let services = []
         const categories = await categoryModel.findAll({
-            order: [['order', 'ASC']]
-        })
-        const servicePromise = categories.map(async (item) => {
-            const subCategories = await subCategoryModel.findAll({
-                where: {
-                    categoryId: item.dataValues.id,
-                    // popular:false
+            attributes: [
+                "id",
+                "categoryName",
+                "displayOrder",
+                "status",
+            ],
+            include: [
+                {
+                    model: subCategoryModel,
+                    as: "subCategories",
+                    attributes: [
+                        "id",
+                        "name",
+                        "icon",
+                        "popular",
+                        "displayOrder",
+                        "status",
+                    ],
+                    required: false,
+                    order: [["displayOrder", "ASC"]],
                 },
-                order: [['order', 'ASC']]
-            })
-            return {
-                categoryName: item.dataValues.categoryName,
-                subCategories: subCategories,
+            ],
+            order: [["displayOrder", "ASC"]],
+        });
+
+        const services = categories.map((category) => {
+            const categoryData = category.toJSON();
+
+            if (categoryData.subCategories) {
+                categoryData.subCategories.sort(
+                    (a, b) => a.displayOrder - b.displayOrder
+                );
             }
-        })
 
-        services = await Promise.all(servicePromise)
+            return categoryData;
+        });
 
-        return res.status(200).json({ message: "Services fetched successfully", success: true, statuscode: 1, services })
+        return res.status(200).json({
+            message: "Services fetched successfully",
+            success: true,
+            services,
+        });
     } catch (error) {
-        return res.status(500).json({ message: "Internal Server Error", success: false })
+        next(error);
     }
-}
+};
 
-exports.getPopularServices = async (req, res) => {
+
+exports.getPopularServices = async (req, res, next) => {
     try {
-        
-            const subCategories = await subCategoryModel.findAll({
-                where: {
-                    popular: 1
-                },
-                order: [['popularityorder', 'ASC']]
-            })
+        const subCategories = await subCategoryModel.findAll({
+            where: {
+                popular: true,
+            },
+            attributes: [
+                "id",
+                "categoryId",
+                "name",
+                "icon",
+                "popular",
+                "displayOrder",
+                "status",
+            ],
+            order: [["displayOrder", "ASC"]],
+        });
 
-        return res.status(200).json({ message: "Services fetched successfully", success: true, statuscode: 1, subCategories })
+        return res.status(200).json({
+            message: "Popular services fetched successfully",
+            success: true,
+            subCategories,
+        });
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({ message: "Internal Server Error", success: false })
+        next(error);
     }
-}
+};
 
 exports.getSubCategories = async (req, res) => {
     try {

@@ -63,64 +63,151 @@ exports.getAllTransactions = async (req, res) => {
     }
 }
 
-function buildWhereConditionForWalletTransactions(startingDate, endingDate, transactionType, balanceType, rechargeTypeId, status, walletId) {
-    let whereCondition = {}
 
-    if (walletId) {
-        whereCondition.walletId = walletId
-    }
+
+function buildWhereConditionForWalletTransactions(
+    startingDate,
+    endingDate,
+    transactionType,
+    balanceType,
+    status,
+    walletId
+) {
+    const whereCondition = {
+        walletId,
+    };
+
+    // Date filter
     if (startingDate && endingDate) {
         whereCondition.createdAt = {
-            [Op.between]: [startingDate, endingDate]
-        }
+            [Op.between]: [startingDate, endingDate],
+        };
+    } else if (startingDate) {
+        whereCondition.createdAt = {
+            [Op.gte]: startingDate,
+        };
+    } else if (endingDate) {
+        whereCondition.createdAt = {
+            [Op.lte]: endingDate,
+        };
     }
-    if (rechargeTypeId) {
-        if (Array.isArray(rechargeTypeId) && rechargeTypeId.length > 0) {
-            whereCondition.rechargeTypeId = {
-                [Op.in]: rechargeTypeId
-            }
-        }
-    }
+
+    // Transaction type filter
     if (transactionType) {
-        whereCondition.transactionType = transactionType
+        whereCondition.transactionType = transactionType;
     }
+
+    // Balance type filter
     if (balanceType) {
-        whereCondition.balanceType = balanceType
+        whereCondition.balanceType = balanceType;
     }
+
+    // Status filter
     if (status) {
-        whereCondition.status = status
+        whereCondition.status = status;
     }
-    // console.log(whereCondition);
-    return whereCondition
+
+    return whereCondition;
 }
 
-exports.getAllWalletTransactions = async (req, res) => {
-    const userId = req.user.id
-    const { startingDate, endingDate, transactionType, balanceType, rechargeTypeId, status, pageNumber } = req.query
+exports.getAllWalletTransactions = async (req, res, next) => {
+    const userId = req.user?.id;
+
+    const {
+        startingDate,
+        endingDate,
+        transactionType,
+        balanceType,
+        status,
+        pageNumber = 1,
+    } = req.query;
 
     try {
-        const getWalletFromUser = await walletModel.findOne({ where: { userId: userId } })
-        if (!getWalletFromUser) {
-            return res.status(200).json({ message: "No wallets found", success: false, statuscode: 0 })
+        // Check authenticated user
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized user",
+                success: false,
+            });
         }
-        const walletId = getWalletFromUser.dataValues.id
-        let whereCondition = {}
-        if (!startingDate && !endingDate && !transactionType && !balanceType && !rechargeTypeId && !status) {
-            whereCondition = {}
+
+        // Validate page number
+        const page = Number(pageNumber);
+
+        if (!Number.isInteger(page) || page < 1) {
+            return res.status(400).json({
+                message: "Invalid page number",
+                success: false,
+            });
         }
-        whereCondition = buildWhereConditionForWalletTransactions(startingDate, endingDate, transactionType, balanceType, rechargeTypeId, status, walletId)
-        const walletTransactionDetails = await walletTransactionModel.findAll({
+
+        // Find wallet belonging to logged-in user
+        const wallet = await walletModel.findOne({
+            where: {
+                userId,
+            },
+            attributes: ["id"],
+        });
+
+        if (!wallet) {
+            return res.status(200).json({
+                message: "No wallets found",
+                success: true,
+                walletTransactionDetails: [],
+                pagination: {
+                    currentPage: page,
+                    limit: 10,
+                    totalRecords: 0,
+                    totalPages: 0,
+                },
+            });
+        }
+
+        const walletId = wallet.id;
+
+        // Build transaction filters
+        const whereCondition =
+            buildWhereConditionForWalletTransactions(
+                startingDate,
+                endingDate,
+                transactionType,
+                balanceType,
+                status,
+                walletId
+            );
+
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
+        // Fetch transactions + total count
+        const {
+            rows: walletTransactionDetails,
+            count: totalRecords,
+        } = await walletTransactionModel.findAndCountAll({
             where: whereCondition,
-            order: [['createdAt', 'DESC']],
-            offset: (pageNumber - 1) * 10,
-            limit: 10
-        })
-        return res.status(200).json({ message: "Wallet transaction details fetched successfully", success: true, statuscode: 1, walletTransactionDetails })
+            order: [["createdAt", "DESC"]],
+            offset,
+            limit,
+        });
+
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        return res.status(200).json({
+            message: "Wallet transaction details fetched successfully",
+            success: true,
+            walletTransactionDetails,
+            pagination: {
+                currentPage: page,
+                limit,
+                totalRecords,
+                totalPages,
+            },
+        });
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: "Internal Server Error", success: false })
+        next(error);
     }
-}
+};
+
 
 
 

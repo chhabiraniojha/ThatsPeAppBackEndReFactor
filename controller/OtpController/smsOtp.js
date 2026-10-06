@@ -39,7 +39,7 @@ const TEST_OTP = process.env.TEST_OTP || "000000";
 //send otp
 //==================================
 
-exports.smsSendOtp = async (req, res) => {
+exports.smsSendOtp = async (req, res, next) => {
   let { mobileNo } = req.body;
 
   try {
@@ -201,29 +201,24 @@ exports.smsSendOtp = async (req, res) => {
 
       } catch (smsError) {
 
-        logger.error(
-          "OTP SMS provider failed",
-          {
-            route: "/user/send-sms-otp",
-            mobileLast4: mobileNo.slice(-4),
-            errorName:
-              smsError?.name ||
-              "SMS_PROVIDER_ERROR",
-            errorMessage:
-              smsError?.message ||
-              "SMS provider request failed"
-          }
-        );
+        smsError.statusCode = 502;
 
-        Sentry.captureException(
-          smsError
-        );
+        smsError.publicMessage =
+          "Unable to send OTP. Please try again later.";
 
-        return res.status(502).json({
-          success: false,
-          message:
-            "Unable to send OTP. Please try again later."
-        });
+        smsError.logContext = {
+          route: "/user/send-sms-otp",
+          mobileLast4: mobileNo.slice(-4),
+          errorName:
+            smsError?.name ||
+            "SMS_PROVIDER_ERROR",
+          errorMessage:
+            smsError?.message ||
+            "SMS provider request failed"
+        };
+
+        next(smsError);
+        return;
       }
     }
 
@@ -257,7 +252,9 @@ exports.smsSendOtp = async (req, res) => {
     // ========================================
     // 12. Success response
     // ========================================
+
     console.log("Sending OTP response");
+
     return res.status(200).json({
       success: true,
       message: "OTP sent successfully"
@@ -269,41 +266,16 @@ exports.smsSendOtp = async (req, res) => {
     // Unexpected error
     // ========================================
 
-    logger.error(
-      "Unexpected error while sending OTP",
-      {
-        route: "/user/send-sms-otp",
-        mobileLast4: mobileNo
-          ? mobileNo.slice(-4)
-          : undefined,
-        errorName:
-          error?.name ||
-          "UNKNOWN_ERROR",
-        errorMessage:
-          error?.message ||
-          "Unknown error"
-      }
-    );
-
-    Sentry.captureException(
-      error
-    );
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
+    next(error);
   }
 };
-
-
 
 
 // ========================================
 // VERIFY SMS OTP
 // ========================================
 
-exports.verifyOtp = async (req, res) => {
+exports.verifyOtp = async (req, res, next) => {
   let { mobileNo, otp } = req.body;
 
   try {
@@ -487,25 +459,6 @@ exports.verifyOtp = async (req, res) => {
     // 12. Unexpected error
     // ========================================
 
-    logger.error(
-      "Unexpected error during OTP verification",
-      {
-        route: "/user/verify-sms-otp",
-        mobileLast4: mobileNo
-          ? mobileNo.slice(-4)
-          : undefined,
-        errorName:
-          error?.name || "UNKNOWN_ERROR",
-        errorMessage:
-          error?.message || "Unknown error"
-      }
-    );
-
-    Sentry.captureException(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
+    next(error);
   }
 };
