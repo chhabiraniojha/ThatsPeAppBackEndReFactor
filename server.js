@@ -42,9 +42,11 @@ const ConvenienceFee = require("./models/ConvenienceFeeModel/ConvenienceFee")
 const bodyParser = require('body-parser');
 
 const userRoutes = require('./routes/userRoutes/userRouter');
+const referralRoutes=require('./routes/userRoutes/referralrouter')
 const otpRoute = require('./routes/OtpRoutes/otpRoute');
 const walletRoute = require('./routes/walletRoutes/walletRouter');
 const walletTransactionRoute = require('./routes/walletRoutes/walletTransactionRouter');
+const walletWithdrawalRoute=require("./routes/walletRoutes/walletWithdrawlRoutes")
 const mobileRechargeTransactionRoute = require('./routes/MobileRechargeTransactionRoutes/mobileRechargeTransactionRouter');
 const mobileRechargeApiRoute = require('./routes/MobileRechargeRouter/mobileRecharge');
 const ticketRoute = require('./routes/TicketRoutes/ticketRouter');
@@ -105,8 +107,10 @@ const startServer = async () => {
     next();
   });
   app.use('/user', userRoutes, addTowallet);
+  app.use('/user/referrals',referralRoutes)
   app.use('/user/wallet', walletRoute);
   app.use('/user/wallet-transaction', walletTransactionRoute);
+  app.use("/user/wallet/withdrawals",walletWithdrawalRoute)
   app.use('/user/mobile-recharge-transaction', mobileRechargeTransactionRoute);
   app.use('/user/recharge', mobileRechargeApiRoute);
   app.use('/user/ticket', ticketRoute);
