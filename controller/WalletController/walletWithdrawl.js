@@ -8,7 +8,7 @@ const WalletTransaction = require(
 const WalletWithdrawal = require(
   "../../models/WalletModels/WalletawithdrawlModel"
 );
-
+const Maintenance = require("../../models/MaintenanceModel/maintenance")
 
 exports.createWithdrawalRequest = async (req, res, next) => {
   const userId = req.user?.id;
@@ -36,7 +36,19 @@ exports.createWithdrawalRequest = async (req, res, next) => {
         success: false,
       });
     }
+    // Check latest maintenance status
+    const maintenance = await Maintenance.findOne({
+      order: [["createdAt", "DESC"]],
+      attributes: ["maintenanceStatus"],
+    });
 
+    if (maintenance?.maintenanceStatus === true) {
+      return res.status(403).json({
+        message:
+          "Application is currently under maintenance. Please try again later.",
+        success: false,
+      });
+    }
     /* ---------------------------------
        2. Amount validation
     --------------------------------- */

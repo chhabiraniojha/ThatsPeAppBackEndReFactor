@@ -1,5 +1,8 @@
 const express = require('express')
 const operatorControlar = require('../../controller/OperatorController/operator')
+const rechargePlanController = require(
+  "../../controller/OperatorController/rechargePlanController"
+);
 
 
 const router = express.Router()
@@ -8,7 +11,7 @@ const Authenticate = require('../../middelWare/auth')
  
 router.get('/opertaor-name-circle-name',  operatorControlar.getOperatorName)
 router.get('/all-operator-circle-name',  operatorControlar.getAllOperatorAndCircleName)
-router.get('/operator-data',  operatorControlar.getOperatorData)
+router.get('/operator-data',Authenticate, operatorControlar.getOperatorData)
 
 
 router.get('/get-placeholder-name',  operatorControlar.getPlaceHolderName)
@@ -18,6 +21,12 @@ router.get('/get-fastag-billInfo/v2',  operatorControlar.getFastagBillInfo_v2)
 router.get('/get-dth-billInfo',  operatorControlar.getDthBillInfo)
 router.get('/get-gas-billInfo',  operatorControlar.getGasBillInfo)
 router.get('/get-mynumber-operator-details',  operatorControlar.getSingleOperatorName)
+
+router.post(
+  "/recharge-plans",
+  Authenticate,
+  rechargePlanController.getRechargePlans
+);
  
 // router.put('/update-ticket-by-admin', ticketController.closeTicketByAdmin)
 

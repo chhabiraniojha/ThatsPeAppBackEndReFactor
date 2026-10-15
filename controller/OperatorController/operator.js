@@ -2,6 +2,8 @@ const operatorModel = require("../../models/OperatorDataModel/operatorData");
 const circleModel = require("../../models/CircleDataModel/circleData");
 const { default: axios } = require("axios");
 const mobikwikService = require("../../services/mobikwikServices/mobikwik.service")
+const OperatorData = require("../../models/OperatorDataModel/operatorData");
+const SubCategory = require("../../models/SubCategoryModel/subCategory");
 
 // --------------- Get Operator Name  By Op code & Get Circle Name By Ci Code ------------
 
@@ -153,24 +155,56 @@ exports.getAllOperatorAndCircleName = async (req, res) => {
   }
 };
 
-exports.getOperatorData = async (req, res) => {
+
+
+exports.getOperatorData = async (req, res, next) => {
   const { subcategoryId } = req.query;
 
   try {
-    let allOperatorName = await operatorModel.findAll({
-      where: { subcategory_id: subcategoryId },
+    if (!subcategoryId || typeof subcategoryId !== "string") {
+      return res.status(400).json({
+        message: "Subcategory ID is required",
+        success: false,
+      });
+    }
+
+    const allOperatorName = await OperatorData.findAll({
+      where: {
+        subCategoryId: subcategoryId,
+        status: "active",
+      },
+
+      attributes: [
+        "id",
+        "name",
+        "discount",
+        "discountType",
+        "operatorImage",
+        "subCategoryId",
+      ],
+
+      include: [
+        {
+          model: SubCategory,
+          as: "subCategory",
+          attributes: ["id", "name", "icon", "categoryId"],
+          where: {
+            status: "active",
+          },
+          required: true,
+        },
+      ],
+
+      order: [["name", "ASC"]],
     });
 
     return res.status(200).json({
-      message: " Operator data Fetch successfully",
+      message: "Operator data fetched successfully",
       success: true,
-      statuscode: 1,
       allOperatorName,
     });
   } catch (error) {
-    return res
-      .status(200)
-      .json({ message: "Internal Server Error", success: false });
+    next(error);
   }
 };
 // --------------- Get All Opeartor name discount  for admin   ----------------
@@ -423,7 +457,7 @@ exports.getFastagBillInfo = async (req, res) => {
 exports.getFastagBillInfo_v2 = async (req, res) => {
 
   const { cn, op } = req.query;
-  
+
 
   try {
 
@@ -435,11 +469,11 @@ exports.getFastagBillInfo_v2 = async (req, res) => {
         message: "cn and op are required"
       });
     }
-    const operatorData=await operatorModel.findByPk(op)
+    const operatorData = await operatorModel.findByPk(op)
     // console.log(operatorData.dataValues)
-    const cir=operatorData.dataValues.mobi_cir_code;
-    const op_code=operatorData.dataValues.mobi_operator_code;
-    console.log(op_code,cir)
+    const cir = operatorData.dataValues.mobi_cir_code;
+    const op_code = operatorData.dataValues.mobi_operator_code;
+    console.log(op_code, cir)
     const adParams = {
       bankName: cir
     };
